@@ -3,7 +3,7 @@ import useAppStore from '../store/useAppStore';
 import { Fingerprint, Lock, ShieldAlert } from 'lucide-react';
 
 export default function LockScreen({ children }) {
-  const { isLocked, setIsLocked, pin } = useAppStore();
+  const { isLocked, setIsLocked, pin, enablePinLock } = useAppStore();
   const [inputPin, setInputPin] = useState('');
   const [error, setError] = useState(false);
   const [biometricSupported, setBiometricSupported] = useState(false);
@@ -46,7 +46,7 @@ export default function LockScreen({ children }) {
     }
   };
 
-  if (!isLocked) {
+  if (!enablePinLock || !isLocked) {
     return children;
   }
 

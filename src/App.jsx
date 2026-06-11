@@ -17,7 +17,7 @@ import ClickCounter from './pages/ClickCounter';
 
 function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
-  const { setIsLocked } = useAppStore();
+  const { setIsLocked, enablePinLock } = useAppStore();
 
   const navItems = [
     { name: 'Beranda', path: '/', icon: <Home size={20} /> },
@@ -90,16 +90,18 @@ function Sidebar({ isOpen, onClose }) {
         ))}
       </nav>
 
-      <div style={{ marginTop: 'auto' }}>
-        <button 
-          className="btn btn-secondary" 
-          onClick={() => setIsLocked(true)}
-          style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--danger)' }}
-        >
-          <LogOut size={20} />
-          Kunci Aplikasi
-        </button>
-      </div>
+      {enablePinLock && (
+        <div style={{ marginTop: 'auto' }}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setIsLocked(true)}
+            style={{ width: '100%', justifyContent: 'flex-start', color: 'var(--danger)' }}
+          >
+            <LogOut size={20} />
+            Kunci Aplikasi
+          </button>
+        </div>
+      )}
 
       <style>{`
         @media (max-width: 768px) {

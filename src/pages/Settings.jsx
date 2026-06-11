@@ -10,7 +10,9 @@ export default function Settings() {
     klingAccessKey, setKlingAccessKey,
     klingSecretKey, setKlingSecretKey,
     aiProvider, setAiProvider, 
-    aiModel, setAiModel 
+    aiModel, setAiModel,
+    enablePinLock, setEnablePinLock,
+    pin, setPin
   } = useAppStore();
 
   const [localGemini, setLocalGemini] = useState(geminiKey);
@@ -21,6 +23,8 @@ export default function Settings() {
   
   const [localProvider, setLocalProvider] = useState(aiProvider || 'gemini');
   const [localModel, setLocalModel] = useState(aiModel || 'gemini-2.5-flash');
+  const [localEnablePinLock, setLocalEnablePinLock] = useState(enablePinLock);
+  const [localPin, setLocalPin] = useState(pin);
   const [saved, setSaved] = useState(false);
 
   const textProviders = {
@@ -58,6 +62,10 @@ export default function Settings() {
   };
 
   const handleSave = () => {
+    if (localEnablePinLock && localPin.length !== 4) {
+      alert('PIN harus berupa 4 digit angka!');
+      return;
+    }
     setGeminiKey(localGemini);
     setGroqKey(localGroq);
     setOpenAiKey(localOpenAi);
@@ -65,6 +73,8 @@ export default function Settings() {
     setKlingSecretKey(localKlingSecret);
     setAiProvider(localProvider);
     setAiModel(localModel);
+    setEnablePinLock(localEnablePinLock);
+    setPin(localPin);
     
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -117,6 +127,51 @@ export default function Settings() {
               <option key={model.id} value={model.id}>{model.name}</option>
             ))}
           </select>
+        </div>
+      </div>
+
+      {/* ===================== KARTU KEAMANAN & PIN LOCK ===================== */}
+      <div className="card" style={{ marginBottom: '2rem', borderTop: '4px solid var(--danger)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+          <Shield size={24} color="var(--danger)" />
+          <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Keamanan & Kunci PIN Aplikasi</h2>
+        </div>
+        
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+          Aktifkan perlindungan PIN untuk mengunci aplikasi saat dimuat ulang atau ketika Anda meninggalkan layar kerja.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '400px' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
+            <input 
+              type="checkbox" 
+              checked={localEnablePinLock} 
+              onChange={(e) => setLocalEnablePinLock(e.target.checked)}
+              style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+            />
+            <span style={{ fontWeight: '600', fontSize: '0.95rem' }}>Aktifkan PIN Kunci saat Masuk</span>
+          </label>
+
+          {localEnablePinLock && (
+            <div style={{ marginTop: '0.5rem', animation: 'slideUpFade 0.2s ease-out forwards' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>Atur 4 Digit PIN Baru</label>
+              <input 
+                type="password" 
+                maxLength={4}
+                className="input-field" 
+                placeholder="PIN Baru" 
+                value={localPin}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, ''); // Hapus non-digit
+                  setLocalPin(val);
+                }}
+                style={{ letterSpacing: '0.2rem', fontSize: '1.1rem', padding: '0.75rem 1rem', maxWidth: '150px', textAlign: 'center' }}
+              />
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+                Hanya angka yang diperbolehkan. PIN default saat ini adalah <strong>{pin || '1234'}</strong>.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

@@ -9,6 +9,8 @@ const useAppStore = create(
       setIsLocked: (locked) => set({ isLocked: locked }),
       pin: '1234', 
       setPin: (newPin) => set({ pin: newPin }),
+      enablePinLock: false,
+      setEnablePinLock: (enabled) => set({ enablePinLock: enabled }),
 
       // Kunci API AI Berdasarkan Penyedia
       geminiKey: '', setGeminiKey: (k) => set({ geminiKey: k }),
