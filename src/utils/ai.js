@@ -3,8 +3,8 @@ export async function generateContent(apiKeysString, prompt, provider = 'gemini'
     throw new Error('API Key belum diatur. Silakan periksa menu Pengaturan.');
   }
 
-  // Pisahkan keys berdasarkan baris baru atau koma
-  const keys = apiKeysString.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
+  // Pisahkan keys berdasarkan spasi, baris baru, atau koma
+  const keys = apiKeysString.split(/[\s,]+/).map(k => k.trim()).filter(Boolean);
   if (keys.length === 0) {
     throw new Error('API Key tidak valid.');
   }
@@ -129,7 +129,7 @@ async function generateOpenAI(apiKey, prompt, model) {
  */
 export async function analyzeImageWithGemini(apiKeysString, imageDataUrl, prompt, model = 'gemini-2.5-flash') {
   if (!apiKeysString) throw new Error('API Key Gemini belum diatur.');
-  const keys = apiKeysString.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
+  const keys = apiKeysString.split(/[\s,]+/).map(k => k.trim()).filter(Boolean);
   if (keys.length === 0) throw new Error('API Key tidak valid.');
 
   let lastError = null;
