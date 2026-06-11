@@ -37,7 +37,7 @@ export async function generateContent(apiKeysString, prompt, provider = 'gemini'
 }
 
 async function fetchWithTimeout(resource, options = {}) {
-  const { timeout = 6000 } = options; // Default 6 seconds timeout
+  const { timeout = 4000 } = options; // Default 4 seconds timeout
   
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
@@ -52,7 +52,7 @@ async function fetchWithTimeout(resource, options = {}) {
   } catch (error) {
     clearTimeout(id);
     if (error.name === 'AbortError') {
-      throw new Error('Timeout: Permintaan ke server AI melebihi batas waktu 6 detik (koneksi sedang sibuk).');
+      throw new Error('Timeout: Permintaan ke server AI melebihi batas waktu 4 detik (koneksi sedang sibuk).');
     }
     throw error;
   }
@@ -286,8 +286,11 @@ ${cardsSummary}
 Instruksi Tambahan:
 Jawablah pesan pengguna menggunakan gaya kepribadianmu di atas. Tulis jawaban yang singkat (1-3 kalimat) agar terasa natural seperti bertukar pesan instan/chatting. Jangan terlalu formal! Gunakan gaya bahasa kasual.`;
 
+  // Batasi riwayat chat hanya 8 pesan terakhir agar prompt tidak terlalu panjang dan AI merespon lebih cepat
+  const recentHistory = chatHistory.slice(-8);
+
   // Gabungkan instruksi dengan pesan pengguna terbaru
-  const fullPrompt = `${systemInstructions}\n\nRiwayat Obrolan:\n${chatHistory.map(h => `${h.role === 'user' ? 'User' : 'Companion'}: ${h.content}`).join('\n')}\nUser: ${userMessage}\nCompanion:`;
+  const fullPrompt = `${systemInstructions}\n\nRiwayat Obrolan:\n${recentHistory.map(h => `${h.role === 'user' ? 'User' : 'Companion'}: ${h.content}`).join('\n')}\nUser: ${userMessage}\nCompanion:`;
 
   return generateContent(apiKey, fullPrompt, provider, model);
 }
