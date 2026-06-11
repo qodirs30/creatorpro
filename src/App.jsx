@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Home, Calendar, Edit3, Settings, LogOut, LayoutDashboard, Target, Wand2, Menu, X, Hash } from 'lucide-react';
+import { Home, Calendar, Edit3, Settings, LogOut, LayoutDashboard, Target, Wand2, Menu, X, Hash, Sparkles } from 'lucide-react';
 import useAppStore from './store/useAppStore';
 import './index.css';
 
@@ -14,6 +14,7 @@ import SocialPlanner from './pages/SocialPlanner';
 import HabitTracker from './pages/HabitTracker';
 import MegaPrompt from './pages/MegaPrompt';
 import ClickCounter from './pages/ClickCounter';
+import MemexJournal from './pages/MemexJournal';
 
 function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
@@ -21,6 +22,7 @@ function Sidebar({ isOpen, onClose }) {
 
   const navItems = [
     { name: 'Beranda', path: '/', icon: <Home size={20} /> },
+    { name: 'Memex AI Capture', path: '/memex', icon: <Sparkles size={20} /> },
     { name: 'Pelacak Kebiasaan', path: '/habits', icon: <Target size={20} /> },
     { name: 'Mega Prompt', path: '/mega-prompt', icon: <Wand2 size={20} /> },
     { name: 'Click Counter', path: '/counter', icon: <Hash size={20} /> },
@@ -159,6 +161,7 @@ function AppLayout() {
       <main className="main-content">
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/memex" element={<MemexJournal />} />
           <Route path="/habits" element={<HabitTracker />} />
           <Route path="/mega-prompt" element={<MegaPrompt />} />
           <Route path="/counter" element={<ClickCounter />} />

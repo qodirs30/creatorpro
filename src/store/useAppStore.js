@@ -116,6 +116,36 @@ const useAppStore = create(
         counters: state.counters.filter(c => c.id !== id)
       })),
 
+      // ================= MEMEX JOURNAL & COMPANION =================
+      memexCards: [],
+      addMemexCard: (card) => set((state) => ({
+        memexCards: [
+          {
+            id: Date.now().toString(),
+            createdAt: new Date().toISOString(),
+            ...card
+          },
+          ...state.memexCards
+        ]
+      })),
+      deleteMemexCard: (id) => set((state) => ({
+        memexCards: state.memexCards.filter(c => c.id !== id)
+      })),
+      memexCompanion: {
+        name: 'Suki',
+        personality: 'teman gaul', // teman gaul, asisten galak, filsuf bijak
+        avatar: '🐱',
+        customPrompt: 'Kamu adalah Suki, teman gaul yang santai, humoris, menggunakan bahasa gaul kekinian (gue, lo), suka menyemangati tapi kadang suka meledek bercanda.'
+      },
+      updateMemexCompanion: (updates) => set((state) => ({
+        memexCompanion: { ...state.memexCompanion, ...updates }
+      })),
+      memexChats: [],
+      addMemexChat: (chat) => set((state) => ({
+        memexChats: [...state.memexChats, { id: Date.now().toString(), timestamp: new Date().toISOString(), ...chat }]
+      })),
+      clearMemexChats: () => set({ memexChats: [] }),
+
       // ================= HISTORY / JEJAK AKTIVITAS =================
       // Format: { id, type, category, title, content, meta, date }
       // type: 'mega-prompt' | 'script' | 'habit' | 'task' | 'social' | 'image-analysis' | etc
