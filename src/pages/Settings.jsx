@@ -190,8 +190,17 @@ export default function Settings() {
               Dapatkan <ExternalLink size={12} />
             </a>
           </label>
-          <input type="password" className="input-field" placeholder="AIzaSy..." value={localGemini} onChange={(e) => setLocalGemini(e.target.value)} />
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Wajib untuk Veo 3 Video Studio dan fitur RPG.</p>
+          <textarea 
+            className="input-field" 
+            placeholder="AIzaSy...&#10;AIzaSy... (Satu key per baris)" 
+            value={localGemini} 
+            onChange={(e) => setLocalGemini(e.target.value)} 
+            rows={3}
+            style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.85rem' }}
+          />
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+            Wajib untuk Veo 3, RPG, dan Memex. <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Bisa masukkan beberapa key (satu per baris) untuk rotasi otomatis.</span>
+          </p>
         </div>
 
         {/* Kling - Access Key */}
@@ -226,7 +235,17 @@ export default function Settings() {
               Dapatkan <ExternalLink size={12} />
             </a>
           </label>
-          <input type="password" className="input-field" placeholder="gsk_..." value={localGroq} onChange={(e) => setLocalGroq(e.target.value)} />
+          <textarea 
+            className="input-field" 
+            placeholder="gsk_...&#10;gsk_... (Satu key per baris)" 
+            value={localGroq} 
+            onChange={(e) => setLocalGroq(e.target.value)} 
+            rows={3}
+            style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.85rem' }}
+          />
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+            Kunci API Groq. <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Bisa masukkan beberapa key (satu per baris) untuk rotasi otomatis.</span>
+          </p>
         </div>
 
         {/* OpenAI */}
@@ -237,7 +256,17 @@ export default function Settings() {
               Dapatkan <ExternalLink size={12} />
             </a>
           </label>
-          <input type="password" className="input-field" placeholder="sk-..." value={localOpenAi} onChange={(e) => setLocalOpenAi(e.target.value)} />
+          <textarea 
+            className="input-field" 
+            placeholder="sk-...&#10;sk-... (Satu key per baris)" 
+            value={localOpenAi} 
+            onChange={(e) => setLocalOpenAi(e.target.value)} 
+            rows={3}
+            style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.85rem' }}
+          />
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+            Kunci API OpenAI. <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Bisa masukkan beberapa key (satu per baris) untuk rotasi otomatis.</span>
+          </p>
         </div>
 
       </div>

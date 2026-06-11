@@ -1,17 +1,39 @@
-export async function generateContent(apiKey, prompt, provider = 'gemini', model = 'gemini-1.5-flash-latest') {
-  if (!apiKey) {
+export async function generateContent(apiKeysString, prompt, provider = 'gemini', model = 'gemini-1.5-flash-latest') {
+  if (!apiKeysString) {
     throw new Error('API Key belum diatur. Silakan periksa menu Pengaturan.');
   }
 
-  if (provider === 'gemini') {
-    return generateGemini(apiKey, prompt, model);
-  } else if (provider === 'groq') {
-    return generateGroq(apiKey, prompt, model);
-  } else if (provider === 'openai') {
-    return generateOpenAI(apiKey, prompt, model);
-  } else {
-    throw new Error('Penyedia AI tidak valid.');
+  // Pisahkan keys berdasarkan baris baru atau koma
+  const keys = apiKeysString.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
+  if (keys.length === 0) {
+    throw new Error('API Key tidak valid.');
   }
+
+  let lastError = null;
+  for (let i = 0; i < keys.length; i++) {
+    const activeKey = keys[i];
+    try {
+      if (provider === 'gemini') {
+        return await generateGemini(activeKey, prompt, model);
+      } else if (provider === 'groq') {
+        return await generateGroq(activeKey, prompt, model);
+      } else if (provider === 'openai') {
+        return await generateOpenAI(activeKey, prompt, model);
+      } else {
+        throw new Error('Penyedia AI tidak valid.');
+      }
+    } catch (err) {
+      console.warn(`Gagal memproses dengan API Key indeks ${i} (${provider}):`, err.message);
+      lastError = err;
+      // Jika ini adalah key terakhir, lemparkan error-nya ke luar
+      if (i === keys.length - 1) {
+        throw err;
+      }
+      // Jika kuota habis atau rate limit, beri delay kecil sebelum lanjut ke key berikutnya
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+  }
+  throw lastError || new Error('Gagal memproses permintaan AI.');
 }
 
 async function generateGemini(apiKey, prompt, model) {
@@ -99,14 +121,35 @@ async function generateOpenAI(apiKey, prompt, model) {
 
 
 /**
- * Analyze an image using Gemini Vision.
- * @param {string} apiKey - Gemini API key
- * @param {string} imageDataUrl - Data URL (data:image/...;base64,...)
- * @param {string} prompt - Text instruction for how to analyze
- * @param {string} model - e.g. 'gemini-2.5-flash'
+ * Analyze an image using Gemini Vision (supports multiple keys with failover).
+ * @param {string} apiKeysString - Gemini API key(s)
+ * @param {string} imageDataUrl - Data URL
+ * @param {string} prompt - Prompt instruction
+ * @param {string} model - Gemini model
  */
-export async function analyzeImageWithGemini(apiKey, imageDataUrl, prompt, model = 'gemini-2.5-flash') {
-  if (!apiKey) throw new Error('API Key Gemini belum diatur.');
+export async function analyzeImageWithGemini(apiKeysString, imageDataUrl, prompt, model = 'gemini-2.5-flash') {
+  if (!apiKeysString) throw new Error('API Key Gemini belum diatur.');
+  const keys = apiKeysString.split(/[\n,]+/).map(k => k.trim()).filter(Boolean);
+  if (keys.length === 0) throw new Error('API Key tidak valid.');
+
+  let lastError = null;
+  for (let i = 0; i < keys.length; i++) {
+    const activeKey = keys[i];
+    try {
+      return await analyzeImageWithGeminiSingle(activeKey, imageDataUrl, prompt, model);
+    } catch (err) {
+      console.warn(`Gagal menganalisa gambar dengan API Key indeks ${i} (Gemini):`, err.message);
+      lastError = err;
+      if (i === keys.length - 1) {
+        throw err;
+      }
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+  }
+  throw lastError || new Error('Gagal menganalisa gambar dengan Gemini.');
+}
+
+async function analyzeImageWithGeminiSingle(apiKey, imageDataUrl, prompt, model) {
   if (!imageDataUrl || !imageDataUrl.startsWith('data:')) throw new Error('Format gambar tidak valid.');
 
   const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
