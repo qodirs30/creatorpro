@@ -36,28 +36,6 @@ export async function generateContent(apiKeysString, prompt, provider = 'gemini'
   throw lastError || new Error('Gagal memproses permintaan AI.');
 }
 
-async function fetchWithTimeout(resource, options = {}) {
-  const { timeout = 4000 } = options; // Default 4 seconds timeout
-  
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), timeout);
-  
-  try {
-    const response = await fetch(resource, {
-      ...options,
-      signal: controller.signal
-    });
-    clearTimeout(id);
-    return response;
-  } catch (error) {
-    clearTimeout(id);
-    if (error.name === 'AbortError') {
-      throw new Error('Timeout: Permintaan ke server AI melebihi batas waktu 4 detik (koneksi sedang sibuk).');
-    }
-    throw error;
-  }
-}
-
 async function generateGemini(apiKey, prompt, model) {
   // Fix the v1beta error by using the correct endpoint structure
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
@@ -68,7 +46,7 @@ async function generateGemini(apiKey, prompt, model) {
     }]
   };
 
-  const response = await fetchWithTimeout(endpoint, {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -95,7 +73,7 @@ async function generateGroq(apiKey, prompt, model) {
     ]
   };
 
-  const response = await fetchWithTimeout(endpoint, {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -123,7 +101,7 @@ async function generateOpenAI(apiKey, prompt, model) {
     ]
   };
 
-  const response = await fetchWithTimeout(endpoint, {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -189,7 +167,7 @@ async function analyzeImageWithGeminiSingle(apiKey, imageDataUrl, prompt, model)
     }]
   };
 
-  const response = await fetchWithTimeout(endpoint, {
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
