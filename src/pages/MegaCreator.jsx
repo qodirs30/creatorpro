@@ -45,7 +45,9 @@ export default function MegaCreator() {
   const [recordedChunks, setRecordedChunks] = useState([]);
   const [recordedUrl, setRecordedUrl] = useState('');
   const [recordingTime, setRecordingTime] = useState(0);
-  const [mirrorCamera, setMirrorCamera] = useState(true);
+  const [mirrorCamera, setMirrorCamera] = useState(false);
+  const [mirrorOutput, setMirrorOutput] = useState(true);
+  const [cameraResolution, setCameraResolution] = useState('720p'); // '720p' | '1080p'
 
   // Teleprompter Styling Customizations
   const [layoutMode, setLayoutMode] = useState('chroma'); // 'split' | 'overlay' | 'chroma'
@@ -93,12 +95,12 @@ export default function MegaCreator() {
     };
   }, [viewMode]);
 
-  // Handle selected camera device change
+  // Handle selected camera device or resolution change
   useEffect(() => {
     if (cameraActive && viewMode === 'teleprompter') {
       startCamera();
     }
-  }, [selectedDevice]);
+  }, [selectedDevice, cameraResolution]);
 
   // Handle recording timer ticks
   useEffect(() => {
@@ -137,9 +139,24 @@ export default function MegaCreator() {
       streamRef.current.getTracks().forEach(track => track.stop());
     }
 
+    const is1080p = cameraResolution === '1080p';
+    const widthTarget = is1080p ? 1920 : 1280;
+    const heightTarget = is1080p ? 1080 : 720;
+
     try {
       const constraints = {
-        video: selectedDevice ? { deviceId: { exact: selectedDevice } } : true,
+        video: selectedDevice 
+          ? { 
+              deviceId: { exact: selectedDevice }, 
+              width: { ideal: widthTarget }, 
+              height: { ideal: heightTarget }, 
+              frameRate: { ideal: 30 } 
+            }
+          : { 
+              width: { ideal: widthTarget }, 
+              height: { ideal: heightTarget }, 
+              frameRate: { ideal: 30 } 
+            },
         audio: { echoCancellation: true, noiseSuppression: true }
       };
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -180,18 +197,32 @@ export default function MegaCreator() {
     setRecordedUrl('');
     setRecordingTime(0);
 
-    const options = { mimeType: 'video/webm;codecs=vp9' };
     let recorder;
-    try {
-      recorder = new MediaRecorder(streamRef.current, options);
-    } catch (e1) {
-      console.warn('VP9 codec not supported, trying default webm...', e1);
-      try {
-        recorder = new MediaRecorder(streamRef.current, { mimeType: 'video/webm' });
-      } catch (e2) {
-        console.warn('webm codec not supported, trying browser default...', e2);
-        recorder = new MediaRecorder(streamRef.current);
+    let selectedMimeType = '';
+    const candidates = [
+      'video/webm;codecs=vp8',
+      'video/webm;codecs=h264',
+      'video/webm;codecs=vp9',
+      'video/webm',
+      'video/mp4;codecs=h264',
+      'video/mp4'
+    ];
+
+    for (const mime of candidates) {
+      if (MediaRecorder.isTypeSupported(mime)) {
+        try {
+          recorder = new MediaRecorder(streamRef.current, { mimeType: mime });
+          selectedMimeType = mime;
+          console.log('Menggunakan codec:', mime);
+          break;
+        } catch (err) {
+          // Lanjutkan ke kandidat berikutnya
+        }
       }
+    }
+
+    if (!recorder) {
+      recorder = new MediaRecorder(streamRef.current);
     }
 
     recorder.ondataavailable = (event) => {
@@ -253,8 +284,10 @@ export default function MegaCreator() {
     const scroll = (time) => {
       if (scrollActive && viewMode === 'teleprompter' && teleprompterRef.current) {
         const delta = time - lastTime;
-        // Scroll speed calculation: (speed * delta) / 50 (calibrated for standard reading pace)
-        const pixelsToScroll = (scrollSpeed * delta) / 50;
+        // Cap the maximum delta step to 33ms (equivalent to a 30fps drop) to prevent
+        // sudden huge jumps of text if the CPU bottlenecks during webcam encoding.
+        const cappedDelta = Math.min(delta, 33);
+        const pixelsToScroll = (scrollSpeed * cappedDelta) / 50;
         scrollPosRef.current += pixelsToScroll;
         teleprompterRef.current.scrollTop = Math.round(scrollPosRef.current);
       }
@@ -921,6 +954,20 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                       </select>
                     )}
 
+                    {/* Resolution Selector */}
+                    {cameraActive && (
+                      <select
+                        className="input-field"
+                        value={cameraResolution}
+                        onChange={(e) => setCameraResolution(e.target.value)}
+                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: '90px', height: '32px' }}
+                        title="Pilih Resolusi Perekaman"
+                      >
+                        <option value="720p">720p HD</option>
+                        <option value="1080p">1080p FHD</option>
+                      </select>
+                    )}
+
                     {/* Camera Toggle */}
                     <button
                       className={`btn ${cameraActive ? 'btn-secondary' : 'btn-primary'}`}
@@ -938,9 +985,21 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                         className={`btn ${mirrorCamera ? 'btn-primary' : 'btn-secondary'}`}
                         onClick={() => setMirrorCamera(!mirrorCamera)}
                         style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', height: '32px' }}
-                        title="Mirror Tampilan Kamera"
+                        title="Mirror Tampilan Kamera (Live Preview)"
                       >
-                        Mirror: {mirrorCamera ? 'ON' : 'OFF'}
+                        Mirror Cam: {mirrorCamera ? 'ON' : 'OFF'}
+                      </button>
+                    )}
+
+                    {/* Mirror Recorded Output Toggle */}
+                    {cameraActive && (
+                      <button
+                        className={`btn ${mirrorOutput ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => setMirrorOutput(!mirrorOutput)}
+                        style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', height: '32px' }}
+                        title="Mirror Hasil Video Rekaman"
+                      >
+                        Mirror Hasil: {mirrorOutput ? 'ON' : 'OFF'}
                       </button>
                     )}
 
@@ -1044,6 +1103,20 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                       </div>
                     )}
 
+                    {/* Resolution Selector in Drawer */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>Resolusi Kamera</label>
+                      <select
+                        className="input-field"
+                        value={cameraResolution}
+                        onChange={(e) => setCameraResolution(e.target.value)}
+                        style={{ padding: '0.35rem', fontSize: '0.8rem', height: '34px' }}
+                      >
+                        <option value="720p">720p HD (Ringan & Mulus)</option>
+                        <option value="1080p">1080p FHD (Kualitas Tinggi)</option>
+                      </select>
+                    </div>
+
                     {/* Toggles */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', justifyContent: 'center' }}>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
@@ -1056,7 +1129,11 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                       </label>
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
                         <input type="checkbox" checked={mirrorCamera} onChange={(e) => setMirrorCamera(e.target.checked)} />
-                        Mirror Kamera
+                        Mirror Kamera Preview
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={mirrorOutput} onChange={(e) => setMirrorOutput(e.target.checked)} />
+                        Mirror Hasil Video
                       </label>
                     </div>
                   </div>
@@ -1249,7 +1326,15 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                     
                     {/* Embedded preview of the recorded video */}
                     <div style={{ display: 'flex', justifyContent: 'center', background: '#000', borderRadius: '8px', overflow: 'hidden', maxHeight: '200px' }}>
-                      <video src={recordedUrl} controls style={{ maxWidth: '100%', maxHeight: '200px' }} />
+                      <video 
+                        src={recordedUrl} 
+                        controls 
+                        style={{ 
+                          maxWidth: '100%', 
+                          maxHeight: '200px',
+                          transform: mirrorOutput ? 'scaleX(-1)' : 'none'
+                        }} 
+                      />
                     </div>
                   </div>
                 )}
