@@ -4,7 +4,8 @@ import useAppStore from '../store/useAppStore';
 import { generateContent } from '../utils/ai';
 import { 
   Video, Sparkles, Clipboard, Download, Play, RefreshCw, 
-  ShieldAlert, CheckCircle2, FileText, Globe, Info, Sliders, Eye
+  ShieldAlert, CheckCircle2, FileText, Globe, Info, Sliders, Eye,
+  Camera, CameraOff, Square, Settings, Volume2, Trash2, SlidersHorizontal
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 
@@ -30,11 +31,39 @@ export default function MegaCreator() {
   const [copied, setCopied] = useState(false);
   const [genError, setGenError] = useState('');
 
-  // Teleprompter State
+  // Teleprompter & Recording State
   const [viewMode, setViewMode] = useState('text'); // 'text' | 'teleprompter'
   const [scrollActive, setScrollActive] = useState(false);
   const [scrollSpeed, setScrollSpeed] = useState(2);
   const teleprompterRef = useRef(null);
+
+  // Video Recorder States
+  const [cameraActive, setCameraActive] = useState(false);
+  const [devices, setDevices] = useState([]);
+  const [selectedDevice, setSelectedDevice] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedChunks, setRecordedChunks] = useState([]);
+  const [recordedUrl, setRecordedUrl] = useState('');
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [mirrorCamera, setMirrorCamera] = useState(true);
+
+  // Teleprompter Styling Customizations
+  const [layoutMode, setLayoutMode] = useState('chroma'); // 'split' | 'overlay' | 'chroma'
+  const [teleFontSize, setTeleFontSize] = useState(26); // in px (16 - 48)
+  const [teleWidth, setTeleWidth] = useState(600); // in px (300 - 900)
+  const [teleColor, setTeleColor] = useState('#22c55e'); // Green neon
+  const [teleLineHeight, setTeleLineHeight] = useState(1.8);
+  const [showGuide, setShowGuide] = useState(true);
+  const [teleFlip, setTeleFlip] = useState(false);
+  const [teleBgOpacity, setTeleBgOpacity] = useState(0.7); // 0.1 - 0.9
+  const [pipCorner, setPipCorner] = useState('top-right'); // 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left'
+  const [showCustomizePanel, setShowCustomizePanel] = useState(false);
+
+  // Media references
+  const videoPreviewRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const streamRef = useRef(null);
+  const recordingTimerRef = useRef(null);
 
   const getApiKey = () => {
     if (aiProvider === 'gemini') return geminiKey;
@@ -43,17 +72,187 @@ export default function MegaCreator() {
     return geminiKey;
   };
 
-  // Teleprompter scroll logic
+  // Enumerate video devices on mount or viewMode change
   useEffect(() => {
-    let interval;
-    if (scrollActive && viewMode === 'teleprompter' && teleprompterRef.current) {
-      interval = setInterval(() => {
-        if (teleprompterRef.current) {
-          teleprompterRef.current.scrollTop += scrollSpeed;
-        }
-      }, 50);
+    if (viewMode === 'teleprompter') {
+      navigator.mediaDevices.enumerateDevices()
+        .then(deviceInfos => {
+          const videoInputs = deviceInfos.filter(d => d.kind === 'videoinput');
+          setDevices(videoInputs);
+          if (videoInputs.length > 0 && !selectedDevice) {
+            setSelectedDevice(videoInputs[0].deviceId);
+          }
+        })
+        .catch(err => console.warn('Error listing video devices:', err));
+    } else {
+      stopCamera();
     }
-    return () => clearInterval(interval);
+    
+    return () => {
+      stopCamera();
+    };
+  }, [viewMode]);
+
+  // Handle selected camera device change
+  useEffect(() => {
+    if (cameraActive && viewMode === 'teleprompter') {
+      startCamera();
+    }
+  }, [selectedDevice]);
+
+  // Handle recording timer ticks
+  useEffect(() => {
+    if (isRecording) {
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    }
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    };
+  }, [isRecording]);
+
+  // Compile chunks into a downloadable file URL after recording stops
+  useEffect(() => {
+    if (!isRecording && recordedChunks.length > 0) {
+      const blob = new Blob(recordedChunks, { type: 'video/webm' });
+      const url = URL.createObjectURL(blob);
+      setRecordedUrl(url);
+    }
+  }, [recordedChunks, isRecording]);
+
+  const startCamera = async () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+
+    try {
+      const constraints = {
+        video: selectedDevice ? { deviceId: { exact: selectedDevice } } : true,
+        audio: { echoCancellation: true, noiseSuppression: true }
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      
+      if (videoPreviewRef.current) {
+        videoPreviewRef.current.srcObject = stream;
+      }
+      setCameraActive(true);
+      setRecordedUrl('');
+      setRecordedChunks([]);
+    } catch (err) {
+      alert('Gagal mengakses kamera/mikrofon: ' + err.message);
+      setCameraActive(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (isRecording) {
+      handleStopRecording();
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoPreviewRef.current) {
+      videoPreviewRef.current.srcObject = null;
+    }
+    setCameraActive(false);
+  };
+
+  const handleStartRecording = () => {
+    if (!streamRef.current) {
+      alert('Kamera belum aktif. Aktifkan kamera terlebih dahulu.');
+      return;
+    }
+    setRecordedChunks([]);
+    setRecordedUrl('');
+    setRecordingTime(0);
+
+    const options = { mimeType: 'video/webm;codecs=vp9' };
+    let recorder;
+    try {
+      recorder = new MediaRecorder(streamRef.current, options);
+    } catch (e1) {
+      console.warn('VP9 codec not supported, trying default webm...', e1);
+      try {
+        recorder = new MediaRecorder(streamRef.current, { mimeType: 'video/webm' });
+      } catch (e2) {
+        console.warn('webm codec not supported, trying browser default...', e2);
+        recorder = new MediaRecorder(streamRef.current);
+      }
+    }
+
+    recorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) {
+        setRecordedChunks(prev => [...prev, event.data]);
+      }
+    };
+
+    mediaRecorderRef.current = recorder;
+    recorder.start(1000);
+    setIsRecording(true);
+    
+    // Auto reset and start scroll
+    if (teleprompterRef.current) {
+      teleprompterRef.current.scrollTop = 0;
+    }
+    setScrollActive(true);
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    setScrollActive(false);
+  };
+
+  const handleDownloadVideo = () => {
+    if (!recordedUrl) return;
+    const a = document.createElement('a');
+    a.href = recordedUrl;
+    a.download = `rekaman_creator_${Date.now()}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Teleprompter scroll logic (smooth requestAnimationFrame scroll)
+  useEffect(() => {
+    let animationFrameId;
+    let lastTime = performance.now();
+    
+    const scroll = (time) => {
+      if (scrollActive && viewMode === 'teleprompter' && teleprompterRef.current) {
+        const delta = time - lastTime;
+        // Scroll speed calculation: speed * delta
+        const pixelsToScroll = (scrollSpeed * delta) / 100;
+        teleprompterRef.current.scrollTop += pixelsToScroll;
+      }
+      lastTime = time;
+      if (scrollActive && viewMode === 'teleprompter') {
+        animationFrameId = requestAnimationFrame(scroll);
+      }
+    };
+    
+    if (scrollActive && viewMode === 'teleprompter') {
+      animationFrameId = requestAnimationFrame(scroll);
+    }
+    
+    return () => {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    };
   }, [scrollActive, scrollSpeed, viewMode]);
 
   // Clean Markdown and Script Cues utility
@@ -564,59 +763,414 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                 }}
               />
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '0.75rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '0.75rem', position: 'relative' }}>
+                <style>{`
+                  .teleprompter-scrollbar::-webkit-scrollbar {
+                    width: 6px;
+                  }
+                  .teleprompter-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                  }
+                  .teleprompter-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.25);
+                    border-radius: 3px;
+                  }
+                  .teleprompter-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: rgba(255, 255, 255, 0.45);
+                  }
+                  @keyframes blink {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.3; }
+                  }
+                  @keyframes pulse-rec {
+                    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+                    70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+                    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+                  }
+                `}</style>
+
+                {/* 1. Header Toolbar: Control Scroll & Recording */}
                 <div style={{ 
-                  display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '0.5rem 0.75rem', background: 'var(--bg-main)', borderRadius: '6px', border: '1px solid var(--border-color)'
+                  display: 'flex', gap: '0.75rem', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '0.75rem 1rem', background: 'var(--bg-main)', borderRadius: '10px', border: '1px solid var(--border-color)',
+                  flexWrap: 'wrap'
                 }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  {/* Play/Pause & Speed */}
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
                     <button
                       className="btn"
                       onClick={() => setScrollActive(!scrollActive)}
                       style={{ 
-                        padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 'bold',
+                        padding: '0.4rem 0.85rem', fontSize: '0.8rem', fontWeight: 'bold',
                         background: scrollActive ? 'var(--danger)' : 'var(--primary)',
-                        color: 'white'
+                        color: 'white',
+                        minWidth: '90px'
                       }}
                     >
                       {scrollActive ? 'Pause' : 'Auto Scroll'}
                     </button>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => {
+                        if (teleprompterRef.current) teleprompterRef.current.scrollTop = 0;
+                        setScrollActive(false);
+                      }}
+                      style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}
+                    >
+                      Reset
+                    </button>
+
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginLeft: '0.5rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Kecepatan:</span>
+                      <input 
+                        type="range" 
+                        min="1" 
+                        max="10" 
+                        value={scrollSpeed} 
+                        onChange={(e) => setScrollSpeed(Number(e.target.value))} 
+                        style={{ width: '85px', height: '4px', cursor: 'pointer' }}
+                      />
+                      <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{scrollSpeed}</span>
+                    </div>
                   </div>
-                  
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flex: 1, maxWidth: '250px' }}>
-                    <label style={{ fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Kecepatan: {scrollSpeed}</label>
-                    <input 
-                      type="range" 
-                      min="1" 
-                      max="8" 
-                      value={scrollSpeed} 
-                      onChange={(e) => setScrollSpeed(Number(e.target.value))} 
-                      style={{ flex: 1, height: '4px', cursor: 'pointer' }}
-                    />
+
+                  {/* Camera Controls */}
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {/* Device Selector */}
+                    {devices.length > 0 && cameraActive && (
+                      <select
+                        className="input-field"
+                        value={selectedDevice}
+                        onChange={(e) => setSelectedDevice(e.target.value)}
+                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: '130px', height: '32px' }}
+                      >
+                        {devices.map(d => (
+                          <option key={d.deviceId} value={d.deviceId}>
+                            {d.label || `Kamera ${d.deviceId.slice(0, 5)}`}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+
+                    {/* Camera Toggle */}
+                    <button
+                      className={`btn ${cameraActive ? 'btn-secondary' : 'btn-primary'}`}
+                      onClick={cameraActive ? stopCamera : startCamera}
+                      style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', height: '32px' }}
+                      title={cameraActive ? "Matikan Kamera" : "Aktifkan Kamera"}
+                    >
+                      {cameraActive ? <CameraOff size={14} /> : <Camera size={14} />}
+                      {cameraActive ? 'Cam Off' : 'Kamera'}
+                    </button>
+
+                    {/* Record Action */}
+                    {cameraActive && (
+                      <button
+                        className="btn"
+                        onClick={isRecording ? handleStopRecording : handleStartRecording}
+                        style={{ 
+                          padding: '0.4rem 0.85rem', fontSize: '0.8rem', height: '32px',
+                          background: isRecording ? '#ef4444' : '#dc2626',
+                          color: 'white',
+                          fontWeight: 'bold',
+                          animation: isRecording ? 'pulse-rec 1.5s infinite' : 'none'
+                        }}
+                      >
+                        {isRecording ? <Square size={12} fill="white" /> : <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'white' }} />}
+                        {isRecording ? `Stop (${formatTime(recordingTime)})` : 'Mulai Rekam'}
+                      </button>
+                    )}
+
+                    {/* Customize Styles Toggle */}
+                    <button
+                      className={`btn ${showCustomizePanel ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setShowCustomizePanel(!showCustomizePanel)}
+                      style={{ padding: '0.4rem', fontSize: '0.8rem', height: '32px' }}
+                      title="Kustomisasi Teleprompter"
+                    >
+                      <SlidersHorizontal size={14} />
+                    </button>
                   </div>
                 </div>
 
-                <div 
-                  ref={teleprompterRef}
-                  style={{ 
+                {/* 2. Style & Layout Customization Drawer */}
+                {showCustomizePanel && (
+                  <div style={{
+                    padding: '1rem', background: 'var(--bg-main)', border: '1px solid var(--border-color)',
+                    borderRadius: '10px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: '1rem', animation: 'slideDownFade 0.2s ease-out'
+                  }}>
+                    {/* Layout Mode */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>Layout Studio</label>
+                      <select
+                        className="input-field"
+                        value={layoutMode}
+                        onChange={(e) => setLayoutMode(e.target.value)}
+                        style={{ padding: '0.35rem', fontSize: '0.8rem', height: '34px' }}
+                      >
+                        <option value="chroma">Chroma (Background Video)</option>
+                        <option value="split">Split (Berdampingan)</option>
+                        <option value="overlay">Floating Overlay (PiP)</option>
+                      </select>
+                    </div>
+
+                    {/* Font Size */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>Ukuran Font: {teleFontSize}px</label>
+                      <input 
+                        type="range" min="16" max="48" value={teleFontSize}
+                        onChange={(e) => setTeleFontSize(Number(e.target.value))}
+                        style={{ width: '100%', height: '4px', cursor: 'pointer' }}
+                      />
+                    </div>
+
+                    {/* Column Width */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>Lebar Kolom: {teleWidth}px</label>
+                      <input 
+                        type="range" min="300" max="900" value={teleWidth}
+                        onChange={(e) => setTeleWidth(Number(e.target.value))}
+                        style={{ width: '100%', height: '4px', cursor: 'pointer' }}
+                      />
+                    </div>
+
+                    {/* Text Color */}
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>Warna Teks</label>
+                      <select
+                        className="input-field"
+                        value={teleColor}
+                        onChange={(e) => setTeleColor(e.target.value)}
+                        style={{ padding: '0.35rem', fontSize: '0.8rem', height: '34px' }}
+                      >
+                        <option value="#22c55e">Hijau Neon</option>
+                        <option value="#ffffff">Putih Bersih</option>
+                        <option value="#facc15">Kuning Cerah</option>
+                        <option value="#22d3ee">Cyan Aqua</option>
+                      </select>
+                    </div>
+
+                    {/* Background Opacity (Chroma Mode) */}
+                    {layoutMode === 'chroma' && (
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>Kegelapan BG: {Math.round(teleBgOpacity*100)}%</label>
+                        <input 
+                          type="range" min="0.1" max="0.9" step="0.1" value={teleBgOpacity}
+                          onChange={(e) => setTeleBgOpacity(Number(e.target.value))}
+                          style={{ width: '100%', height: '4px', cursor: 'pointer' }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Toggles */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', justifyContent: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={showGuide} onChange={(e) => setShowGuide(e.target.checked)} />
+                        Garis Batas Baca
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={teleFlip} onChange={(e) => setTeleFlip(e.target.checked)} />
+                        Mirror Teks (Reflektor)
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={mirrorCamera} onChange={(e) => setMirrorCamera(e.target.checked)} />
+                        Mirror Kamera
+                      </label>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Main Studio Workspace Layout */}
+                <div style={{
+                  display: 'flex',
+                  flexDirection: layoutMode === 'split' ? 'row' : 'column',
+                  gap: '1rem',
+                  minHeight: '380px',
+                  position: 'relative',
+                  backgroundColor: '#000',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  border: '1px solid var(--border-color)'
+                }}>
+                  {/* CAMERA VIEW LAYER / ELEMENT */}
+                  {cameraActive && (
+                    <div 
+                      style={
+                        layoutMode === 'chroma'
+                          ? {
+                              position: 'absolute',
+                              inset: 0,
+                              zIndex: 1,
+                              width: '100%',
+                              height: '100%'
+                            }
+                          : layoutMode === 'split'
+                          ? {
+                              width: '40%',
+                              minWidth: '220px',
+                              position: 'relative',
+                              zIndex: 1,
+                              borderRight: '1px solid #222',
+                              background: '#111'
+                            }
+                          : {
+                              // Overlay Mode (Floating PiP)
+                              position: 'absolute',
+                              width: '180px',
+                              height: '135px',
+                              zIndex: 10,
+                              borderRadius: '8px',
+                              border: '2px solid var(--primary)',
+                              overflow: 'hidden',
+                              boxShadow: 'var(--shadow-lg)',
+                              top: pipCorner.includes('top') ? '10px' : 'auto',
+                              bottom: pipCorner.includes('bottom') ? '10px' : 'auto',
+                              left: pipCorner.includes('left') ? '10px' : 'auto',
+                              right: pipCorner.includes('right') ? '10px' : 'auto',
+                              cursor: 'pointer'
+                            }
+                      }
+                      onClick={layoutMode === 'overlay' ? () => {
+                        const corners = ['top-right', 'top-left', 'bottom-left', 'bottom-right'];
+                        const nextIdx = (corners.indexOf(pipCorner) + 1) % corners.length;
+                        setPipCorner(corners[nextIdx]);
+                      } : undefined}
+                      title={layoutMode === 'overlay' ? "Klik untuk memindahkan sudut kamera" : undefined}
+                    >
+                      <video
+                        ref={videoPreviewRef}
+                        autoPlay
+                        playsInline
+                        muted
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          transform: mirrorCamera ? 'scaleX(-1)' : 'none'
+                        }}
+                      />
+                      {/* Recording indicator overlay */}
+                      {isRecording && (
+                        <div style={{
+                          position: 'absolute', top: '10px', left: '10px',
+                          display: 'flex', alignItems: 'center', gap: '6px',
+                          background: 'rgba(0,0,0,0.6)', padding: '2px 8px', borderRadius: '4px',
+                          zIndex: 12
+                        }}>
+                          <span style={{
+                            width: '8px', height: '8px', borderRadius: '50%', background: '#ff4d4d',
+                            display: 'inline-block', animation: 'blink 1.2s infinite'
+                          }} />
+                          <span style={{ color: 'white', fontSize: '0.65rem', fontWeight: 'bold' }}>REK</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* CHROMA BG DARK OVERLAY */}
+                  {cameraActive && layoutMode === 'chroma' && (
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      backgroundColor: `rgba(0, 0, 0, ${teleBgOpacity})`,
+                      zIndex: 2,
+                      pointerEvents: 'none'
+                    }} />
+                  )}
+
+                  {/* TELEPROMPTER SCREEN */}
+                  <div style={{
                     flex: 1,
-                    overflowY: 'auto',
-                    backgroundColor: '#000000',
-                    color: '#22c55e', 
-                    borderRadius: '8px',
-                    padding: '2rem',
-                    minHeight: '320px',
-                    maxHeight: '400px',
-                    fontFamily: "'Outfit', sans-serif",
-                    fontSize: '1.35rem',
-                    lineHeight: 1.9,
-                    textAlign: 'center',
-                    whiteSpace: 'pre-wrap',
-                    scrollBehavior: 'smooth'
-                  }}
-                >
-                  {scriptText}
+                    position: 'relative',
+                    zIndex: 3,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: cameraActive && layoutMode === 'chroma' ? 'transparent' : '#000',
+                    width: layoutMode === 'split' && cameraActive ? '60%' : '100%'
+                  }}>
+                    {/* Focus line indicator */}
+                    {showGuide && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '35%',
+                        left: '20px',
+                        right: '20px',
+                        height: '2px',
+                        background: 'linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.5) 15%, rgba(239, 68, 68, 0.5) 85%, transparent)',
+                        pointerEvents: 'none',
+                        zIndex: 5,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}>
+                        <span style={{ color: '#ef4444', fontSize: '0.65rem', background: '#000', padding: '1px 4px', borderRadius: '4px', border: '1px solid rgba(239,68,68,0.3)' }}>BACA DISINI</span>
+                        <span style={{ color: '#ef4444', fontSize: '0.65rem', background: '#000', padding: '1px 4px', borderRadius: '4px', border: '1px solid rgba(239,68,68,0.3)' }}>BACA DISINI</span>
+                      </div>
+                    )}
+
+                    <div 
+                      ref={teleprompterRef}
+                      style={{
+                        width: '100%',
+                        maxWidth: `${teleWidth}px`,
+                        height: '380px',
+                        overflowY: 'auto',
+                        padding: '10rem 1.5rem 10rem 1.5rem', 
+                        textAlign: 'center',
+                        whiteSpace: 'pre-wrap',
+                        fontFamily: "'Outfit', sans-serif",
+                        fontSize: `${teleFontSize}px`,
+                        lineHeight: teleLineHeight,
+                        color: teleColor,
+                        transform: teleFlip ? 'scaleX(-1)' : 'none',
+                        scrollBehavior: 'smooth'
+                      }}
+                      className="teleprompter-scrollbar"
+                    >
+                      {scriptText}
+                    </div>
+                  </div>
                 </div>
+
+                {/* 4. Post-Recording Review & Action Drawer */}
+                {recordedUrl && (
+                  <div className="card" style={{ 
+                    border: '1px solid var(--success)', background: 'rgba(16, 185, 129, 0.04)', 
+                    marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem',
+                    animation: 'slideUpFade 0.3s ease-out'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <h4 style={{ fontSize: '0.95rem', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}>
+                        <CheckCircle2 size={16} /> Rekaman Video Berhasil Dibuat!
+                      </h4>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="btn btn-primary" onClick={handleDownloadVideo} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
+                          <Download size={14} /> Download Rekaman Video
+                        </button>
+                        <button 
+                          className="btn btn-secondary" 
+                          onClick={() => {
+                            if (window.confirm("Hapus rekaman sementara ini?")) {
+                              setRecordedUrl('');
+                              setRecordedChunks([]);
+                            }
+                          }}
+                          style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                        >
+                          <Trash2 size={14} /> Hapus
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Embedded preview of the recorded video */}
+                    <div style={{ display: 'flex', justifyContent: 'center', background: '#000', borderRadius: '8px', overflow: 'hidden', maxHeight: '200px' }}>
+                      <video src={recordedUrl} controls style={{ maxWidth: '100%', maxHeight: '200px' }} />
+                    </div>
+                  </div>
+                )}
               </div>
             )
           ) : (
