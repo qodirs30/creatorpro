@@ -26,7 +26,7 @@ export default function MegaCreator() {
   const [scrapedContext, setScrapedContext] = useState('');
 
   // Output State
-  const [scriptText, setScriptText] = useState('');
+  const [scriptText, setScriptText] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [genError, setGenError] = useState('');
@@ -124,6 +124,13 @@ export default function MegaCreator() {
       setRecordedUrl(url);
     }
   }, [recordedChunks, isRecording]);
+
+  // Synchronize webcam stream to video element when it mounts
+  useEffect(() => {
+    if (cameraActive && streamRef.current && videoPreviewRef.current) {
+      videoPreviewRef.current.srcObject = streamRef.current;
+    }
+  }, [cameraActive, selectedDevice]);
 
   const startCamera = async () => {
     if (streamRef.current) {
@@ -676,7 +683,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
               <FileText size={18} color="var(--success)" /> Naskah Konten Terstruktur
             </h3>
             
-            {scriptText && (
+            {scriptText !== null && (
               <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                 <div style={{ 
                   display: 'flex', background: 'var(--bg-main)', padding: '0.2rem', 
@@ -731,6 +738,19 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                 >
                   <FileText size={12} /> PDF
                 </button>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => {
+                    if (window.confirm("Hapus naskah ini?")) {
+                      setScriptText(null);
+                      setViewMode('text');
+                    }
+                  }}
+                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                  title="Hapus Naskah"
+                >
+                  <Trash2 size={12} /> Hapus
+                </button>
               </div>
             )}
           </div>
@@ -742,12 +762,13 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                 AI sedang merancang sudut viral video Anda dan menulis naskah detail per adegan...
               </p>
             </div>
-          ) : scriptText ? (
+          ) : scriptText !== null ? (
             viewMode === 'text' ? (
               <textarea
-                readOnly
                 className="input-field"
-                value={scriptText}
+                value={scriptText || ''}
+                onChange={(e) => setScriptText(e.target.value)}
+                placeholder="Tulis atau tempel naskah Anda di sini untuk langsung menggunakan teleprompter..."
                 style={{ 
                   flex: 1, 
                   fontFamily: 'monospace', 
@@ -759,7 +780,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                   borderRadius: '8px',
                   padding: '1.25rem',
                   minHeight: '350px',
-                  resize: 'none'
+                  resize: 'vertical'
                 }}
               />
             ) : (
@@ -1174,11 +1195,26 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
               </div>
             )
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-secondary)', padding: '3rem 0' }}>
-              <Sliders size={36} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
-              <p style={{ fontSize: '0.9rem', textAlign: 'center', maxWidth: '300px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-secondary)', padding: '3rem 0', gap: '1rem' }}>
+              <Sliders size={36} style={{ opacity: 0.5 }} />
+              <p style={{ fontSize: '0.9rem', textAlign: 'center', maxWidth: '300px', margin: 0 }}>
                 Isi ide atau link di kolom kiri, atur konfigurasi, lalu klik generate untuk melihat naskah Anda.
               </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: '80%', maxWidth: '200px' }}>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+                <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>ATAU</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--border-color)' }} />
+              </div>
+              <button
+                className="btn btn-secondary"
+                onClick={() => {
+                  setScriptText('');
+                  setViewMode('text');
+                }}
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
+              >
+                + Tulis Naskah Manual
+              </button>
             </div>
           )}
         </div>
