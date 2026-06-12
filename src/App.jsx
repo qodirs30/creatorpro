@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Home, Calendar, Edit3, Settings, LogOut, LayoutDashboard, Target, Wand2, Menu, X, Hash, Sparkles, Code } from 'lucide-react';
+import { Home, Calendar, Edit3, Settings, LogOut, LayoutDashboard, Target, Wand2, Menu, X, Hash, Sparkles, Code, Video } from 'lucide-react';
 import useAppStore from './store/useAppStore';
 import './index.css';
 
@@ -16,6 +16,7 @@ import MegaPrompt from './pages/MegaPrompt';
 import ClickCounter from './pages/ClickCounter';
 import MemexJournal from './pages/MemexJournal';
 import VibeCoder from './pages/VibeCoder';
+import MegaCreator from './pages/MegaCreator';
 
 function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
@@ -28,6 +29,7 @@ function Sidebar({ isOpen, onClose }) {
     { name: 'Mega Prompt', path: '/mega-prompt', icon: <Wand2 size={20} /> },
     { name: 'Click Counter', path: '/counter', icon: <Hash size={20} /> },
     { name: 'Penulis Naskah', path: '/scripting', icon: <Edit3 size={20} /> },
+    { name: 'Mega Creator Studio', path: '/mega-creator', icon: <Video size={20} /> },
     { name: 'Perencana Konten', path: '/social', icon: <LayoutDashboard size={20} /> },
     { name: 'Jadwal Harian', path: '/planner', icon: <Calendar size={20} /> },
     { name: 'Vibe Coding Hub', path: '/vibe-generator', icon: <Code size={20} /> },
@@ -171,6 +173,7 @@ function AppLayout() {
           <Route path="/social" element={<SocialPlanner />} />
           <Route path="/planner" element={<DailyPlanner />} />
           <Route path="/vibe-generator" element={<VibeCoder />} />
+          <Route path="/mega-creator" element={<MegaCreator />} />
           <Route path="/settings" element={<AppSettings />} />
         </Routes>
       </main>
