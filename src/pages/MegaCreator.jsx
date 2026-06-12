@@ -208,6 +208,7 @@ export default function MegaCreator() {
     if (teleprompterRef.current) {
       teleprompterRef.current.scrollTop = 0;
     }
+    scrollPosRef.current = 0;
     setScrollActive(true);
   };
 
@@ -853,6 +854,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                       className="btn btn-secondary"
                       onClick={() => {
                         if (teleprompterRef.current) teleprompterRef.current.scrollTop = 0;
+                        scrollPosRef.current = 0;
                         setScrollActive(false);
                       }}
                       style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}
@@ -931,6 +933,18 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                       {cameraActive ? <CameraOff size={14} /> : <Camera size={14} />}
                       {cameraActive ? 'Cam Off' : 'Kamera'}
                     </button>
+
+                    {/* Mirror Camera Preview Toggle */}
+                    {cameraActive && (
+                      <button
+                        className={`btn ${mirrorCamera ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => setMirrorCamera(!mirrorCamera)}
+                        style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem', height: '32px' }}
+                        title="Mirror Tampilan Kamera"
+                      >
+                        Mirror: {mirrorCamera ? 'ON' : 'OFF'}
+                      </button>
+                    )}
 
                     {/* Record Action */}
                     {cameraActive && (
