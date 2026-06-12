@@ -22,6 +22,7 @@ export default function MemexJournal() {
   const [chatInput, setChatInput] = useState('');
   const [loadingChat, setLoadingChat] = useState(false);
   const [isConfiguring, setIsConfiguring] = useState(false);
+  const [mobileActiveView, setMobileActiveView] = useState('journal'); // 'journal' | 'chat'
 
   // Kustomisasi Companion
   const [compName, setCompName] = useState(memexCompanion.name);
@@ -168,11 +169,11 @@ export default function MemexJournal() {
   const avatarsList = ['🐱', '🤖', '🦊', '🦉', '🦁', '🐸', '👾', '✨'];
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '3rem' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '3rem', paddingLeft: '1rem', paddingRight: '1rem' }}>
       {/* Header Utama */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1 className="text-gradient" style={{ fontSize: '2.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <h1 className="text-gradient responsive-title" style={{ fontSize: '2.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
             <Sparkles size={32} color="var(--primary)" /> Memex AI Capture
           </h1>
           <p style={{ color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
@@ -194,18 +195,36 @@ export default function MemexJournal() {
         </div>
       )}
 
+      {/* Mobile Tab Switcher */}
+      <div className="mobile-view-tabs">
+        <button 
+          className={`mobile-tab-btn ${mobileActiveView === 'journal' ? 'active' : ''}`}
+          onClick={() => setMobileActiveView('journal')}
+          type="button"
+        >
+          <FileText size={16} /> Jurnal & Capture
+        </button>
+        <button 
+          className={`mobile-tab-btn ${mobileActiveView === 'chat' ? 'active' : ''}`}
+          onClick={() => setMobileActiveView('chat')}
+          type="button"
+        >
+          <MessageSquare size={16} /> Chat Companion
+        </button>
+      </div>
+
       {/* Panel Utama Layout */}
-      <div className="memex-layout">
+      <div className={`memex-layout ${mobileActiveView === 'journal' ? 'journal-active' : 'chat-active'}`}>
         
         {/* Kolom Kiri: Input Capture & Card Feeds */}
-        <div>
+        <div className="memex-layout-left">
           
           {/* Form Quick Capture */}
           <div className="card" style={{ marginBottom: '2rem', borderTop: '4px solid var(--primary)' }}>
             <h3 style={{ marginBottom: '1rem', fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Sparkles size={18} color="var(--primary)" /> Tulis Fragmen Hari Ini
             </h3>
-            <form onSubmit={handleCaptureSubmit} style={{ display: 'flex', gap: '0.75rem' }}>
+            <form onSubmit={handleCaptureSubmit} className="memex-capture-form">
               <input
                 type="text"
                 className="input-field"

@@ -575,10 +575,10 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
   const isUrl = idea.trim().startsWith('http://') || idea.trim().startsWith('https://') || idea.trim().includes('.com') || idea.trim().includes('youtube.com');
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '3rem' }}>
+    <div style={{ maxWidth: '1000px', margin: '0 auto', paddingBottom: '3rem', paddingLeft: '1rem', paddingRight: '1rem' }}>
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
-        <h1 className="text-gradient" style={{ marginBottom: '0.5rem', fontSize: '2.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <h1 className="text-gradient responsive-title" style={{ marginBottom: '0.5rem', fontSize: '2.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <Video size={36} /> Mega Creator Studio
         </h1>
         <p style={{ color: 'var(--text-secondary)' }}>
@@ -586,7 +586,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start', marginBottom: '2rem' }}>
+      <div className="mega-creator-workspace-grid">
         
         {/* Input Card */}
         <div className="card" style={{ borderTop: '4px solid var(--primary)' }}>
@@ -868,7 +868,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                   flexWrap: 'wrap'
                 }}>
                   {/* Play/Pause & Speed */}
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div className="teleprompter-play-controls">
                     <button
                       className="btn"
                       onClick={() => setScrollActive(!scrollActive)}
@@ -907,7 +907,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                     </div>
 
                     {/* Quick Font Color Selector */}
-                    <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', marginLeft: '0.75rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '0.75rem' }}>
+                    <div className="teleprompter-quick-colors">
                       <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Warna:</span>
                       {[
                         { name: 'Hijau', value: '#22c55e' },
@@ -937,7 +937,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                   </div>
 
                   {/* Camera Controls */}
-                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div className="teleprompter-camera-controls">
                     {/* Device Selector */}
                     {devices.length > 0 && cameraActive && (
                       <select
@@ -1140,54 +1140,20 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                 )}
 
                 {/* 3. Main Studio Workspace Layout */}
-                <div style={{
-                  display: 'flex',
-                  flexDirection: layoutMode === 'split' ? 'row' : 'column',
-                  gap: '1rem',
-                  minHeight: '380px',
-                  position: 'relative',
-                  backgroundColor: '#000',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  border: '1px solid var(--border-color)'
-                }}>
+                <div className={`teleprompter-studio-container layout-${layoutMode}`}>
                   {/* CAMERA VIEW LAYER / ELEMENT */}
                   {cameraActive && (
                     <div 
+                      className={`teleprompter-camera-layer camera-layout-${layoutMode}`}
                       style={
-                        layoutMode === 'chroma'
+                        layoutMode === 'overlay'
                           ? {
-                              position: 'absolute',
-                              inset: 0,
-                              zIndex: 1,
-                              width: '100%',
-                              height: '100%'
-                            }
-                          : layoutMode === 'split'
-                          ? {
-                              width: '40%',
-                              minWidth: '220px',
-                              position: 'relative',
-                              zIndex: 1,
-                              borderRight: '1px solid #222',
-                              background: '#111'
-                            }
-                          : {
-                              // Overlay Mode (Floating PiP)
-                              position: 'absolute',
-                              width: '180px',
-                              height: '135px',
-                              zIndex: 10,
-                              borderRadius: '8px',
-                              border: '2px solid var(--primary)',
-                              overflow: 'hidden',
-                              boxShadow: 'var(--shadow-lg)',
                               top: pipCorner.includes('top') ? '10px' : 'auto',
                               bottom: pipCorner.includes('bottom') ? '10px' : 'auto',
                               left: pipCorner.includes('left') ? '10px' : 'auto',
-                              right: pipCorner.includes('right') ? '10px' : 'auto',
-                              cursor: 'pointer'
+                              right: pipCorner.includes('right') ? '10px' : 'auto'
                             }
+                          : undefined
                       }
                       onClick={layoutMode === 'overlay' ? () => {
                         const corners = ['top-right', 'top-left', 'bottom-left', 'bottom-right'];
@@ -1238,16 +1204,8 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                   )}
 
                   {/* TELEPROMPTER SCREEN */}
-                  <div style={{
-                    flex: 1,
-                    position: 'relative',
-                    zIndex: 3,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: cameraActive && layoutMode === 'chroma' ? 'transparent' : '#000',
-                    width: layoutMode === 'split' && cameraActive ? '60%' : '100%'
+                  <div className={`teleprompter-screen-wrapper ${cameraActive && layoutMode === 'split' ? 'split-active' : ''}`} style={{
+                    background: cameraActive && layoutMode === 'chroma' ? 'transparent' : '#000'
                   }}>
                     {/* Focus line indicator */}
                     {showGuide && (
@@ -1272,22 +1230,14 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                     <div 
                       ref={teleprompterRef}
                       onScroll={handleTeleprompterScroll}
+                      className="teleprompter-text-viewport teleprompter-scrollbar"
                       style={{
-                        width: '100%',
                         maxWidth: `${teleWidth}px`,
-                        height: '380px',
-                        overflowY: 'auto',
-                        padding: '10rem 1.5rem 10rem 1.5rem', 
-                        textAlign: 'center',
-                        whiteSpace: 'pre-wrap',
-                        fontFamily: "'Outfit', sans-serif",
                         fontSize: `${teleFontSize}px`,
                         lineHeight: teleLineHeight,
                         color: teleColor,
-                        transform: teleFlip ? 'scaleX(-1)' : 'none',
-                        scrollBehavior: 'auto'
+                        transform: teleFlip ? 'scaleX(-1)' : 'none'
                       }}
-                      className="teleprompter-scrollbar"
                     >
                       {scriptText}
                     </div>
@@ -1305,7 +1255,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                       <h4 style={{ fontSize: '0.95rem', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}>
                         <CheckCircle2 size={16} /> Rekaman Video Berhasil Dibuat!
                       </h4>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div className="recorded-actions-wrapper">
                         <button className="btn btn-primary" onClick={handleDownloadVideo} style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem' }}>
                           <Download size={14} /> Download Rekaman Video
                         </button>

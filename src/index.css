@@ -511,3 +511,233 @@ input, textarea, select {
   transform: translateY(-2px) scale(1.05);
 }
 
+/* ==========================================================================
+   RESPONSIVE MOBILE STYLES FOR MEMEX & MEGA CREATOR
+   ========================================================================== */
+
+/* Responsive Typography */
+.responsive-title {
+  font-size: clamp(1.8rem, 6vw, 2.5rem) !important;
+}
+
+/* Memex Mobile Tabs */
+.mobile-view-tabs {
+  display: none;
+  margin-bottom: 1.5rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 25px;
+  padding: 0.25rem;
+  gap: 0.25rem;
+}
+.mobile-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border-radius: 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.mobile-tab-btn.active {
+  background-color: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Memex Layout Switches */
+@media (max-width: 900px) {
+  .mobile-view-tabs {
+    display: flex;
+  }
+  .memex-layout.journal-active .memex-companion-panel {
+    display: none !important;
+  }
+  .memex-layout.chat-active .memex-layout-left {
+    display: none !important;
+  }
+  .memex-layout {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .memex-capture-form {
+    flex-direction: column;
+  }
+  .memex-capture-form button {
+    width: 100%;
+    padding: 0.65rem !important;
+  }
+}
+
+/* Mega Creator Responsive Styles */
+.mega-creator-workspace-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+  margin-bottom: 2rem;
+}
+
+.teleprompter-studio-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-height: 380px;
+  position: relative;
+  background-color: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+.teleprompter-studio-container.layout-split {
+  flex-direction: row;
+}
+
+.teleprompter-camera-layer.camera-layout-chroma {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+}
+.teleprompter-camera-layer.camera-layout-split {
+  width: 40%;
+  min-width: 220px;
+  position: relative;
+  z-index: 1;
+  border-right: 1px solid #222;
+  background: #111;
+}
+.teleprompter-camera-layer.camera-layout-overlay {
+  position: absolute;
+  width: 180px;
+  height: 135px;
+  z-index: 10;
+  border-radius: 8px;
+  border: 2px solid var(--primary);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+}
+
+.teleprompter-screen-wrapper {
+  flex: 1;
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  width: 100%;
+}
+.teleprompter-screen-wrapper.split-active {
+  width: 60%;
+}
+
+.teleprompter-text-viewport {
+  width: 100%;
+  height: 380px;
+  overflow-y: auto;
+  text-align: center;
+  white-space: pre-wrap;
+  font-family: 'Outfit', sans-serif;
+  scroll-behavior: auto;
+  padding: 10rem 1.5rem;
+}
+
+/* Play & Camera Toolbar Wrappers */
+.teleprompter-play-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.teleprompter-quick-colors {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  margin-left: 0.75rem;
+  border-left: 1px solid var(--border-color);
+  padding-left: 0.75rem;
+}
+.teleprompter-camera-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .mega-creator-workspace-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .teleprompter-studio-container {
+    min-height: auto;
+  }
+  .teleprompter-studio-container.layout-split {
+    flex-direction: column !important;
+  }
+  .teleprompter-camera-layer.camera-layout-split {
+    width: 100% !important;
+    height: 180px !important;
+    min-width: 0 !important;
+    border-right: none !important;
+    border-bottom: 1px solid #222;
+  }
+  .teleprompter-camera-layer.camera-layout-overlay {
+    width: 110px !important;
+    height: 82.5px !important;
+  }
+  .teleprompter-screen-wrapper.split-active {
+    width: 100% !important;
+  }
+  .teleprompter-text-viewport {
+    height: 280px;
+    padding: 5rem 1rem;
+  }
+  .teleprompter-quick-colors {
+    border-left: none;
+    padding-left: 0;
+    margin-left: 0;
+    margin-top: 0.25rem;
+    width: 100%;
+    justify-content: center;
+  }
+  .teleprompter-play-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .teleprompter-camera-controls {
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px dashed var(--border-color);
+  }
+  .teleprompter-camera-controls select {
+    flex: 1;
+    min-width: 90px;
+  }
+  .recorded-actions-wrapper {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .recorded-actions-wrapper button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+
