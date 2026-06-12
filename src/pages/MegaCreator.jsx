@@ -235,7 +235,16 @@ export default function MegaCreator() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Teleprompter scroll logic (smooth requestAnimationFrame scroll)
+  const scrollPosRef = useRef(0);
+
+  // Synchronize scroll float ref when scrolling starts
+  useEffect(() => {
+    if (teleprompterRef.current) {
+      scrollPosRef.current = teleprompterRef.current.scrollTop;
+    }
+  }, [scrollActive]);
+
+  // Teleprompter scroll logic (smooth requestAnimationFrame scroll using sub-pixel float ref)
   useEffect(() => {
     let animationFrameId;
     let lastTime = performance.now();
@@ -243,9 +252,10 @@ export default function MegaCreator() {
     const scroll = (time) => {
       if (scrollActive && viewMode === 'teleprompter' && teleprompterRef.current) {
         const delta = time - lastTime;
-        // Scroll speed calculation: speed * delta
-        const pixelsToScroll = (scrollSpeed * delta) / 100;
-        teleprompterRef.current.scrollTop += pixelsToScroll;
+        // Scroll speed calculation: (speed * delta) / 50 (calibrated for standard reading pace)
+        const pixelsToScroll = (scrollSpeed * delta) / 50;
+        scrollPosRef.current += pixelsToScroll;
+        teleprompterRef.current.scrollTop = Math.round(scrollPosRef.current);
       }
       lastTime = time;
       if (scrollActive && viewMode === 'teleprompter') {
@@ -261,6 +271,15 @@ export default function MegaCreator() {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
   }, [scrollActive, scrollSpeed, viewMode]);
+
+  const handleTeleprompterScroll = () => {
+    if (teleprompterRef.current) {
+      const diff = Math.abs(teleprompterRef.current.scrollTop - scrollPosRef.current);
+      if (diff > 5) {
+        scrollPosRef.current = teleprompterRef.current.scrollTop;
+      }
+    }
+  };
 
   // Clean Markdown and Script Cues utility
   const cleanMarkdown = (text, isScriptOnly = false) => {
@@ -853,6 +872,35 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                       />
                       <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>{scrollSpeed}</span>
                     </div>
+
+                    {/* Quick Font Color Selector */}
+                    <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', marginLeft: '0.75rem', borderLeft: '1px solid var(--border-color)', paddingLeft: '0.75rem' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Warna:</span>
+                      {[
+                        { name: 'Hijau', value: '#22c55e' },
+                        { name: 'Putih', value: '#ffffff' },
+                        { name: 'Kuning', value: '#facc15' },
+                        { name: 'Cyan', value: '#22d3ee' },
+                        { name: 'Merah', value: '#ef4444' }
+                      ].map(c => (
+                        <button
+                          key={c.value}
+                          onClick={() => setTeleColor(c.value)}
+                          style={{
+                            width: '16px',
+                            height: '16px',
+                            borderRadius: '50%',
+                            backgroundColor: c.value,
+                            border: teleColor === c.value ? '2px solid var(--primary)' : '1px solid #666',
+                            cursor: 'pointer',
+                            padding: 0,
+                            boxShadow: teleColor === c.value ? `0 0 4px ${c.value}` : 'none',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title={c.name}
+                        />
+                      ))}
+                    </div>
                   </div>
 
                   {/* Camera Controls */}
@@ -1134,6 +1182,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
 
                     <div 
                       ref={teleprompterRef}
+                      onScroll={handleTeleprompterScroll}
                       style={{
                         width: '100%',
                         maxWidth: `${teleWidth}px`,
