@@ -4,7 +4,7 @@ import useAppStore from '../store/useAppStore';
 import { generateContent } from '../utils/ai';
 import { 
   Video, Sparkles, Clipboard, Download, Play, RefreshCw, 
-  ShieldAlert, CheckCircle2, FileText, Globe, Info, Sliders, Eye, FileDigit
+  ShieldAlert, CheckCircle2, FileText, Globe, Info, Sliders, Eye
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 
@@ -17,6 +17,7 @@ export default function MegaCreator() {
   const [tone, setTone] = useState('casual');
   const [platform, setPlatform] = useState('shorts');
   const [duration, setDuration] = useState('short');
+  const [scriptOnly, setScriptOnly] = useState(false);
   
   // Scraper State
   const [isScraping, setIsScraping] = useState(false);
@@ -29,10 +30,10 @@ export default function MegaCreator() {
   const [copied, setCopied] = useState(false);
   const [genError, setGenError] = useState('');
 
-  // Teleprompter / Reader Mode State
+  // Teleprompter State
   const [viewMode, setViewMode] = useState('text'); // 'text' | 'teleprompter'
   const [scrollActive, setScrollActive] = useState(false);
-  const [scrollSpeed, setScrollSpeed] = useState(2); // 1 to 5
+  const [scrollSpeed, setScrollSpeed] = useState(2);
   const teleprompterRef = useRef(null);
 
   const getApiKey = () => {
@@ -42,7 +43,7 @@ export default function MegaCreator() {
     return geminiKey;
   };
 
-  // Teleprompter auto-scroll logic
+  // Teleprompter scroll logic
   useEffect(() => {
     let interval;
     if (scrollActive && viewMode === 'teleprompter' && teleprompterRef.current) {
@@ -55,32 +56,42 @@ export default function MegaCreator() {
     return () => clearInterval(interval);
   }, [scrollActive, scrollSpeed, viewMode]);
 
-  // Clean Markdown utility
-  const cleanMarkdown = (text) => {
+  // Clean Markdown and Script Cues utility
+  const cleanMarkdown = (text, isScriptOnly = false) => {
     if (!text) return '';
     let out = text;
+    
     // Remove code fences
     out = out.replace(/```[a-zA-Z]*\n?/g, '').replace(/```/g, '');
-    // Remove bold **text** and __text__
+    
+    if (isScriptOnly) {
+      // Remove bracketed visual/audio/scene directions (e.g. [Visual: ...], [BGM: ...], [Scene 1])
+      out = out.replace(/\[[^\]]*\]/g, '');
+      
+      // Remove parenthesized directions (e.g. (SFX: ...), (BGM: ...), (Scene ...))
+      out = out.replace(/\((SFX|BGM|Musik|Audio|Scene|Adegan|Visual|Efek|Transition|Transisi)[^)]*\)/gim, '');
+      
+      // Remove speaker labels at the beginning of lines (e.g. Narator:, VO:, Kreator:, Host:)
+      out = out.replace(/^[\s]*(Narator|Pembicara|VO|Voiceover|Voice Over|Kreator|Host|Speaker|Presenter)\s*:\s*/gim, '');
+      out = out.replace(/\n[\s]*(Narator|Pembicara|VO|Voiceover|Voice Over|Kreator|Host|Speaker|Presenter)\s*:\s*/gim, '\n');
+    }
+    
+    // Remove standard markdown formatting
     out = out.replace(/\*\*(.+?)\*\*/g, '$1');
     out = out.replace(/__(.+?)__/g, '$1');
-    // Remove italic *text* and _text_
     out = out.replace(/\*(.+?)\*/g, '$1');
     out = out.replace(/_(.+?)_/g, '$1');
-    // Remove headings (#)
     out = out.replace(/^#{1,6}\s+/gm, '');
-    // Remove list bullets
     out = out.replace(/^[\s]*[-*+]\s+/gm, '');
-    // Remove inline backticks
     out = out.replace(/`([^`]+)`/g, '$1');
-    // Remove blockquote markers
     out = out.replace(/^>\s+/gm, '');
+    
     // Collapse blank lines
     out = out.replace(/\n{3,}/g, '\n\n');
     return out.trim();
   };
 
-  // Free CORS Proxies for link scraping
+  // Scraper proxy
   const fetchHtmlWithFallbackProxies = async (url) => {
     const proxies = [
       (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
@@ -109,7 +120,7 @@ export default function MegaCreator() {
         lastError = err;
       }
     }
-    throw lastError || new Error('All CORS proxies failed.');
+    throw lastError || new Error('All proxies failed.');
   };
 
   const handleScrapeLink = async () => {
@@ -196,7 +207,27 @@ export default function MegaCreator() {
       long: 'Long-form (3-10 menit)'
     };
 
-    const systemPrompt = `Kamu adalah seorang "Mega Creator" dan Penulis Naskah Konten kelas dunia. Tugasmu adalah membuat naskah video/konten yang sangat terstruktur, viral-friendly, dan profesional berdasarkan input pengguna.
+    let systemPrompt = '';
+    
+    if (scriptOnly) {
+      systemPrompt = `Kamu adalah seorang "Mega Creator" dan Penulis Naskah Konten kelas dunia. Tugasmu adalah membuat naskah video/konten yang viral-friendly dan siap dibaca untuk dubbing/voiceover berdasarkan ide pengguna.
+
+INPUT PENGGUNA:
+- Ide / Topik / Konteks: "${idea}"
+- Gaya Konten: "${styleNames[contentStyle]}"
+- Nuansa Konten (Tone): "${toneNames[tone]}"
+- Platform Target: "${platformNames[platform]}"
+- Durasi: "${durationNames[duration]}"
+
+ATURAN NASKAH WAJIB (SCRIPT ONLY):
+- Hasilkan HANYA naskah narasi / dialog suara (Voiceover / VO) yang akan dibaca langsung oleh pembicara dari awal sampai akhir.
+- JANGAN sertakan panduan visual, adegan (scene), audio/SFX, tips editing, atau penanda visual lainnya.
+- JANGAN gunakan simbol markdown tebal/miring (** atau *).
+- Tulis langsung teks narasi dalam bentuk paragraf-paragraf bersih yang siap dibaca mengalir.
+
+Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya kreator konten modern seperti Samuel Christ). Jangan sertakan kata pengantar atau penutup lain di luar naskah tersebut.`;
+    } else {
+      systemPrompt = `Kamu adalah seorang "Mega Creator" dan Penulis Naskah Konten kelas dunia. Tugasmu adalah membuat naskah video/konten yang sangat terstruktur, viral-friendly, dan profesional berdasarkan input pengguna.
 
 INPUT PENGGUNA:
 - Ide / Topik / Konteks: "${idea}"
@@ -222,21 +253,20 @@ Struktur Naskah harus mencakup:
    Dialog / Narasi: [Teks kalimat yang harus dibaca secara lisan oleh kreator untuk dubbing]
 3. TIPS PRODUKSI & EDITING.
 
-Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya kreator konten modern seperti Samuel Christ). Jangan sertakan kata pengantar atau penutup lain di luar laporan naskah tersebut.`;
+Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya kreator konten modern seperti Samuel Christ). Jangan sertakan kata pengantar atau penutup lain di luar naskah tersebut.`;
+    }
 
-    try {
+  try {
       const response = await generateContent(apiKey, systemPrompt, aiProvider, aiModel);
-      // Clean markdown characters as double protection
-      const cleaned = cleanMarkdown(response);
+      const cleaned = cleanMarkdown(response, scriptOnly);
       setScriptText(cleaned);
 
-      // Log to history
       addHistory({
         type: 'script',
         category: 'Mega Creator',
         title: idea.slice(0, 80),
         content: cleaned,
-        meta: { contentStyle, tone, platform }
+        meta: { contentStyle, tone, platform, scriptOnly }
       });
     } catch (err) {
       setGenError(err.message || 'Gagal menghasilkan naskah konten.');
@@ -392,6 +422,23 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
               </div>
             </div>
 
+            {/* Script Only Checkbox */}
+            <div style={{ marginTop: '0.5rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', userSelect: 'none' }}>
+                <input 
+                  type="checkbox" 
+                  checked={scriptOnly} 
+                  onChange={(e) => setScriptOnly(e.target.checked)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  disabled={isGenerating}
+                />
+                <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>Script Only (Hanya Narasi Dubbing saja)</span>
+              </label>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: '1.7rem', marginTop: '0.2rem', lineHeight: 1.4 }}>
+                Jika dicentang, AI hanya akan menghasilkan kalimat suara pembicara saja (tanpa instruksi visual/SFX) untuk mempermudah dubbing langsung.
+              </p>
+            </div>
+
             {/* Warning if API keys not set */}
             {!getApiKey() && (
               <div style={{ 
@@ -432,7 +479,6 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
             
             {scriptText && (
               <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-                {/* View Mode Toggle */}
                 <div style={{ 
                   display: 'flex', background: 'var(--bg-main)', padding: '0.2rem', 
                   borderRadius: '6px', border: '1px solid var(--border-color)', marginRight: '0.25rem' 
@@ -518,9 +564,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                 }}
               />
             ) : (
-              /* Teleprompter Reader Screen */
               <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '0.75rem' }}>
-                {/* Teleprompter controls */}
                 <div style={{ 
                   display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'space-between',
                   padding: '0.5rem 0.75rem', background: 'var(--bg-main)', borderRadius: '6px', border: '1px solid var(--border-color)'
@@ -558,7 +602,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                     flex: 1,
                     overflowY: 'auto',
                     backgroundColor: '#000000',
-                    color: '#22c55e', // classic high contrast green for teleprompters
+                    color: '#22c55e', 
                     borderRadius: '8px',
                     padding: '2rem',
                     minHeight: '320px',
