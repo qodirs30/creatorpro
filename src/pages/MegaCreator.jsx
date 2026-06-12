@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
 import { generateContent } from '../utils/ai';
 import { 
   Video, Sparkles, Clipboard, Download, Play, RefreshCw, 
-  ShieldAlert, CheckCircle2, FileText, Globe, Info, Sliders
+  ShieldAlert, CheckCircle2, FileText, Globe, Info, Sliders, Eye, FileDigit
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 
@@ -29,11 +29,55 @@ export default function MegaCreator() {
   const [copied, setCopied] = useState(false);
   const [genError, setGenError] = useState('');
 
+  // Teleprompter / Reader Mode State
+  const [viewMode, setViewMode] = useState('text'); // 'text' | 'teleprompter'
+  const [scrollActive, setScrollActive] = useState(false);
+  const [scrollSpeed, setScrollSpeed] = useState(2); // 1 to 5
+  const teleprompterRef = useRef(null);
+
   const getApiKey = () => {
     if (aiProvider === 'gemini') return geminiKey;
     if (aiProvider === 'groq') return groqKey;
     if (aiProvider === 'openai') return openAiKey;
     return geminiKey;
+  };
+
+  // Teleprompter auto-scroll logic
+  useEffect(() => {
+    let interval;
+    if (scrollActive && viewMode === 'teleprompter' && teleprompterRef.current) {
+      interval = setInterval(() => {
+        if (teleprompterRef.current) {
+          teleprompterRef.current.scrollTop += scrollSpeed;
+        }
+      }, 50);
+    }
+    return () => clearInterval(interval);
+  }, [scrollActive, scrollSpeed, viewMode]);
+
+  // Clean Markdown utility
+  const cleanMarkdown = (text) => {
+    if (!text) return '';
+    let out = text;
+    // Remove code fences
+    out = out.replace(/```[a-zA-Z]*\n?/g, '').replace(/```/g, '');
+    // Remove bold **text** and __text__
+    out = out.replace(/\*\*(.+?)\*\*/g, '$1');
+    out = out.replace(/__(.+?)__/g, '$1');
+    // Remove italic *text* and _text_
+    out = out.replace(/\*(.+?)\*/g, '$1');
+    out = out.replace(/_(.+?)_/g, '$1');
+    // Remove headings (#)
+    out = out.replace(/^#{1,6}\s+/gm, '');
+    // Remove list bullets
+    out = out.replace(/^[\s]*[-*+]\s+/gm, '');
+    // Remove inline backticks
+    out = out.replace(/`([^`]+)`/g, '$1');
+    // Remove blockquote markers
+    out = out.replace(/^>\s+/gm, '');
+    // Collapse blank lines
+    out = out.replace(/\n{3,}/g, '\n\n');
+    return out.trim();
   };
 
   // Free CORS Proxies for link scraping
@@ -69,10 +113,7 @@ export default function MegaCreator() {
   };
 
   const handleScrapeLink = async () => {
-    // Regex to detect if input looks like a URL
-    const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i;
     const trimmedIdea = idea.trim();
-    
     if (!trimmedIdea) {
       setScrapeError('Masukkan URL YouTube/Sosmed di kolom Ide terlebih dahulu.');
       return;
@@ -90,11 +131,9 @@ export default function MegaCreator() {
     try {
       const html = await fetchHtmlWithFallbackProxies(formattedUrl);
       
-      // Extract title
       const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
       const title = titleMatch ? titleMatch[1].trim() : 'Link Video / Halaman';
 
-      // Extract description
       const descMatch = html.match(/<meta[^>]*name="description"[^>]*content="([^"]*)"/i) ||
                          html.match(/<meta[^>]*property="og:description"[^>]*content="([^"]*)"/i);
       const description = descMatch ? descMatch[1].trim() : '';
@@ -125,6 +164,8 @@ export default function MegaCreator() {
     setGenError('');
     setScriptText('');
     setCopied(false);
+    setViewMode('text');
+    setScrollActive(false);
 
     const styleNames = {
       storytelling: 'Storytelling (Bercerita / Naratif)',
@@ -164,38 +205,37 @@ INPUT PENGGUNA:
 - Platform Target: "${platformNames[platform]}"
 - Durasi: "${durationNames[duration]}"
 
-Hasilkan naskah yang sangat terperinci dalam format Markdown (.md) yang mencakup bagian berikut:
+Hasilkan naskah yang sangat terperinci dalam format TEKS BERSIH (PLAIN TEXT) tanpa formatting markdown tebal/miring/heading yang mengganggu saat dibaca.
 
-1. **PERENCANAAN VIRAL (VIRAL METRICS)**:
-   - **Tujuan Konten**: Apa tujuan utama video ini.
-   - **Target Audiens**: Siapa target spesifik yang akan menonton.
-   - **Pilar Konten**: Kategori konten.
-   - **Viral Trigger Angle**: Mengapa naskah ini akan memicu interaksi tinggi (suka, komen, share, simpan).
+PANDUAN NASKAH WAJIB:
+- JANGAN gunakan simbol bintang (* atau **) untuk menebalkan teks.
+- JANGAN gunakan pagar (#) untuk judul. Tulis judul dengan huruf kapital biasa saja.
+- Sediakan pembagian scene yang rapi dan pisahkan baris dialog dengan jelas agar bisa langsung dibaca untuk dubbing.
 
-2. **DRAFT NASKAH STRUKTUR (SCENE BY SCENE)**:
-   Buat naskah video dengan format pemisahan adegan yang jelas. Untuk setiap adegan, sedia informasi:
-   - **Waktu / Scene**: (misal: Scene 1: Hook / Detik 00:00 - 00:03)
-   - **Visual & Overlay**: Petunjuk adegan kamera, ekspresi wajah, gerakan tangan, dan tulisan/teks yang muncul di layar (Overlay).
-   - **Audio (BGM/SFX)**: Jenis sound effect (misal: swoosh, vinyl scratch, pop) dan nuansa latar musik (BGM).
-   - **Dialog / Narasi (Voiceover)**: Teks persis yang harus diucapkan oleh pembicara.
+Struktur Naskah harus mencakup:
+1. PERENCANAAN VIRAL (VIRAL METRICS): Tujuan konten, target audiens, dan viral hook trigger angle.
+2. DRAFT NASKAH STRUKTUR (SCENE BY SCENE):
+   Format per adegan:
+   Scene X: (Waktu/Durasi)
+   Visual & Overlay: [Deskripsi visual di layar]
+   Audio BGM/SFX: [Efek suara dan jenis lagu]
+   Dialog / Narasi: [Teks kalimat yang harus dibaca secara lisan oleh kreator untuk dubbing]
+3. TIPS PRODUKSI & EDITING.
 
-3. **TIPS PRODUKSI (PRODUKSI & EDITING)**:
-   - Rekomendasi pacing (kecepatan berbicara).
-   - B-Roll yang dibutuhkan.
-   - Efek transisi video yang disarankan.
-
-Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya kreator konten modern seperti Samuel Christ). Jangan berikan teks pembuka atau penutup lain di luar laporan Markdown tersebut.`;
+Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya kreator konten modern seperti Samuel Christ). Jangan sertakan kata pengantar atau penutup lain di luar laporan naskah tersebut.`;
 
     try {
       const response = await generateContent(apiKey, systemPrompt, aiProvider, aiModel);
-      setScriptText(response);
+      // Clean markdown characters as double protection
+      const cleaned = cleanMarkdown(response);
+      setScriptText(cleaned);
 
       // Log to history
       addHistory({
         type: 'script',
         category: 'Mega Creator',
         title: idea.slice(0, 80),
-        content: response,
+        content: cleaned,
         meta: { contentStyle, tone, platform }
       });
     } catch (err) {
@@ -230,7 +270,6 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(11);
     
-    // Split text to fit page width
     const lines = doc.splitTextToSize(scriptText, 170);
     
     let y = 20;
@@ -390,8 +429,38 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
             <h3 style={{ fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <FileText size={18} color="var(--success)" /> Naskah Konten Terstruktur
             </h3>
+            
             {scriptText && (
-              <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                {/* View Mode Toggle */}
+                <div style={{ 
+                  display: 'flex', background: 'var(--bg-main)', padding: '0.2rem', 
+                  borderRadius: '6px', border: '1px solid var(--border-color)', marginRight: '0.25rem' 
+                }}>
+                  <button
+                    className="btn"
+                    onClick={() => setViewMode('text')}
+                    style={{ 
+                      padding: '0.25rem 0.5rem', fontSize: '0.7rem', borderRadius: '4px',
+                      background: viewMode === 'text' ? 'var(--bg-card)' : 'transparent',
+                      color: viewMode === 'text' ? 'var(--primary)' : 'var(--text-secondary)'
+                    }}
+                  >
+                    Teks Bersih
+                  </button>
+                  <button
+                    className="btn"
+                    onClick={() => setViewMode('teleprompter')}
+                    style={{ 
+                      padding: '0.25rem 0.5rem', fontSize: '0.7rem', borderRadius: '4px',
+                      background: viewMode === 'teleprompter' ? 'var(--bg-card)' : 'transparent',
+                      color: viewMode === 'teleprompter' ? 'var(--primary)' : 'var(--text-secondary)'
+                    }}
+                  >
+                    <Eye size={12} /> Mode Baca
+                  </button>
+                </div>
+
                 <button 
                   className="btn btn-secondary" 
                   onClick={handleCopy}
@@ -429,24 +498,83 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
               </p>
             </div>
           ) : scriptText ? (
-            <textarea
-              readOnly
-              className="input-field"
-              value={scriptText}
-              style={{ 
-                flex: 1, 
-                fontFamily: 'monospace', 
-                fontSize: '0.85rem', 
-                lineHeight: 1.6,
-                backgroundColor: '#0f172a',
-                color: '#f8fafc',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '1.25rem',
-                minHeight: '350px',
-                resize: 'none'
-              }}
-            />
+            viewMode === 'text' ? (
+              <textarea
+                readOnly
+                className="input-field"
+                value={scriptText}
+                style={{ 
+                  flex: 1, 
+                  fontFamily: 'monospace', 
+                  fontSize: '0.85rem', 
+                  lineHeight: 1.6,
+                  backgroundColor: '#0f172a',
+                  color: '#f8fafc',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '1.25rem',
+                  minHeight: '350px',
+                  resize: 'none'
+                }}
+              />
+            ) : (
+              /* Teleprompter Reader Screen */
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1, gap: '0.75rem' }}>
+                {/* Teleprompter controls */}
+                <div style={{ 
+                  display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '0.5rem 0.75rem', background: 'var(--bg-main)', borderRadius: '6px', border: '1px solid var(--border-color)'
+                }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <button
+                      className="btn"
+                      onClick={() => setScrollActive(!scrollActive)}
+                      style={{ 
+                        padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 'bold',
+                        background: scrollActive ? 'var(--danger)' : 'var(--primary)',
+                        color: 'white'
+                      }}
+                    >
+                      {scrollActive ? 'Pause' : 'Auto Scroll'}
+                    </button>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flex: 1, maxWidth: '250px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Kecepatan: {scrollSpeed}</label>
+                    <input 
+                      type="range" 
+                      min="1" 
+                      max="8" 
+                      value={scrollSpeed} 
+                      onChange={(e) => setScrollSpeed(Number(e.target.value))} 
+                      style={{ flex: 1, height: '4px', cursor: 'pointer' }}
+                    />
+                  </div>
+                </div>
+
+                <div 
+                  ref={teleprompterRef}
+                  style={{ 
+                    flex: 1,
+                    overflowY: 'auto',
+                    backgroundColor: '#000000',
+                    color: '#22c55e', // classic high contrast green for teleprompters
+                    borderRadius: '8px',
+                    padding: '2rem',
+                    minHeight: '320px',
+                    maxHeight: '400px',
+                    fontFamily: "'Outfit', sans-serif",
+                    fontSize: '1.35rem',
+                    lineHeight: 1.9,
+                    textAlign: 'center',
+                    whiteSpace: 'pre-wrap',
+                    scrollBehavior: 'smooth'
+                  }}
+                >
+                  {scriptText}
+                </div>
+              </div>
+            )
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-secondary)', padding: '3rem 0' }}>
               <Sliders size={36} style={{ marginBottom: '0.75rem', opacity: 0.5 }} />
