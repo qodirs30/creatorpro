@@ -274,11 +274,9 @@ export default function MegaCreator() {
   }, [scrollActive, scrollSpeed, viewMode]);
 
   const handleTeleprompterScroll = () => {
+    if (scrollActive) return;
     if (teleprompterRef.current) {
-      const diff = Math.abs(teleprompterRef.current.scrollTop - scrollPosRef.current);
-      if (diff > 5) {
-        scrollPosRef.current = teleprompterRef.current.scrollTop;
-      }
+      scrollPosRef.current = teleprompterRef.current.scrollTop;
     }
   };
 
@@ -1210,7 +1208,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                         lineHeight: teleLineHeight,
                         color: teleColor,
                         transform: teleFlip ? 'scaleX(-1)' : 'none',
-                        scrollBehavior: 'smooth'
+                        scrollBehavior: 'auto'
                       }}
                       className="teleprompter-scrollbar"
                     >
