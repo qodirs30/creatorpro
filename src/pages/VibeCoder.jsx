@@ -11,7 +11,7 @@ export default function VibeCoder() {
   const { geminiKey, groqKey, openAiKey, aiProvider, aiModel, addHistory } = useAppStore();
 
   // Tabs
-  const [activeTab, setActiveTab] = useState('pedoman'); // 'pedoman' | 'token-killer'
+  const [activeTab, setActiveTab] = useState('pedoman'); // 'pedoman' | 'token-killer' | 'inspector'
 
   // Tab 1: Pedoman Proyek State
   const [theme, setTheme] = useState('Toko Kopi Online');
@@ -34,6 +34,14 @@ export default function VibeCoder() {
   const [isCompressing, setIsCompressing] = useState(false);
   const [copiedLogs, setCopiedLogs] = useState(false);
   const [stats, setStats] = useState(null);
+
+  // Tab 3: URL Design Inspector State
+  const [targetUrl, setTargetUrl] = useState('');
+  const [manualHtml, setManualHtml] = useState('');
+  const [isInspecting, setIsInspecting] = useState(false);
+  const [inspectorResult, setInspectorResult] = useState('');
+  const [inspectorError, setInspectorError] = useState('');
+  const [isProxyFailed, setIsProxyFailed] = useState(false);
 
   const getApiKey = () => {
     if (aiProvider === 'gemini') return geminiKey;
@@ -391,7 +399,6 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
 
     setIsCompressing(true);
     
-    // Simulate slight instant processing for smooth UX animation
     setTimeout(() => {
       let lines = rawLogs.split('\n');
       let detectedType = logType;
@@ -530,7 +537,6 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
           let trimmed = line.trim();
           if (!trimmed) return;
 
-          // Strip typical timestamp prefixes to clean log
           trimmed = trimmed.replace(/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?\s*/, '');
           trimmed = trimmed.replace(/^\[\d{2}:\d{2}:\d{2}\]\s*/, '');
 
@@ -559,14 +565,12 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
         }
       }
 
-      // Calculations
       const charBefore = rawLogs.length;
       const charAfter = compressed.length;
       const tokensBefore = Math.round(charBefore / 4);
       const tokensAfter = Math.round(charAfter / 4);
       const savedPercent = Math.max(0, Math.round(((charBefore - charAfter) / charBefore) * 100));
       
-      // standard Claude 3.5 Sonnet / GPT-4o input: $3.00 per 1M tokens
       const costBefore = (tokensBefore / 1000000) * 3.0;
       const costAfter = (tokensAfter / 1000000) * 3.0;
       const costSaved = Math.max(0, costBefore - costAfter);
@@ -591,6 +595,141 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
     setTimeout(() => setCopiedLogs(false), 2000);
   };
 
+  // Tab 3: URL Design Inspector logic
+  const cleanAndTruncateHtml = (html) => {
+    if (!html) return '';
+    
+    // Extract head
+    let headSnippet = '';
+    const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+    if (headMatch) {
+      const headContent = headMatch[1];
+      headSnippet = headContent
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '')
+        .trim();
+    }
+
+    // Extract body
+    let bodySnippet = '';
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    if (bodyMatch) {
+      let bodyContent = bodyMatch[1];
+      bodyContent = bodyContent
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '')
+        .replace(/<svg[^>]*>[\s\S]*?<\/svg>/gi, '[SVG Icon]')
+        .replace(/<!--[\s\S]*?-->/g, ''); 
+        
+      bodySnippet = bodyContent.slice(0, 25000);
+      if (bodyContent.length > 25000) {
+        bodySnippet += '\n... [HTML Body content truncated to save tokens] ...';
+      }
+    } else {
+      let partial = html
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<svg[^>]*>[\s\S]*?<\/svg>/gi, '[SVG]')
+        .trim();
+      bodySnippet = partial.slice(0, 25000);
+    }
+
+    return `--- HEAD ELEMENT ---\n${headSnippet.slice(0, 5000)}\n\n--- BODY ELEMENT (TRUNCATED) ---\n${bodySnippet}`;
+  };
+
+  const handleInspectWebsite = async () => {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      setInspectorError('API Key belum diatur. Harap konfigurasi API Key di menu Pengaturan.');
+      return;
+    }
+
+    if (!targetUrl.trim() && !manualHtml.trim()) {
+      setInspectorError('Masukkan URL website atau tempel kode HTML terlebih dahulu.');
+      return;
+    }
+
+    setIsInspecting(true);
+    setInspectorError('');
+    setInspectorResult('');
+    setIsProxyFailed(false);
+
+    let htmlContent = '';
+
+    if (targetUrl.trim()) {
+      try {
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`);
+        if (!response.ok) {
+          throw new Error('Gagal menghubungi proxy server.');
+        }
+        const data = await response.json();
+        if (data && data.contents) {
+          htmlContent = data.contents;
+        } else {
+          throw new Error('Konten website kosong atau diblokir.');
+        }
+      } catch (err) {
+        console.warn('CORS Proxy failed, falling back to manual paste HTML:', err.message);
+        setIsProxyFailed(true);
+        setIsInspecting(false);
+        setInspectorError('Gagal mengambil data dari URL secara otomatis (Terhalang kebijakan CORS target). Silakan gunakan kolom "Tempel Kode HTML" di bawah untuk menganalisis secara manual.');
+        return;
+      }
+    } else {
+      htmlContent = manualHtml;
+    }
+
+    const cleanedHtml = cleanAndTruncateHtml(htmlContent);
+
+    try {
+      const prompt = `Kamu adalah Web Design & UX Inspector Pro. Tugasmu adalah menganalisis struktur dan visual dari situs web berdasarkan data scraping HTML/CSS berikut.
+
+URL Situs: ${targetUrl || 'Input Manual HTML'}
+HTML/CSS Metadata & Snippet:
+${cleanedHtml}
+
+Hasilkan Laporan Breakdown Desain Lengkap dalam format Markdown (.md) yang siap dikonsumsi oleh AI Coding Assistant (Cursor / Copilot / Claude Code / Kiro) untuk mereplikasi/mempelajari desain situs ini secara akurat.
+
+Laporan HARUS mencakup:
+1. **INFORMASI UMUM**: Judul halaman, deskripsi singkat, bahasa utama situs.
+2. **SKEMA WARNA (PALETTE)**:
+   - Warna Utama (Primary), Warna Sekunder (Secondary), Background (Latar Belakang), Aksen (Accent), serta Teks.
+   - Sediakan kode HEX untuk setiap warna.
+   - Sediakan token/custom properties CSS (misal: --color-primary: #xxxxxx) yang direkomendasikan.
+3. **TIPOGRAFI & FONT**:
+   - Jenis font yang digunakan (Font Family) untuk heading dan body.
+   - Sizing skala (font size) dan weights (font weight) yang digunakan.
+4. **ESTETIKA & GAYA DESAIN**:
+   - Gaya desain (misal: Minimalis, Glassmorphism, Brutalisme, Web3 Modern, Retro, Corporate, dll.).
+   - Border radius, efek shadow/bayangan, ketebalan border, dan spacing (padding/margin) yang mencolok.
+5. **STRUKTUR TATA LETAK (LAYOUT ARCHITECTURE)**:
+   - Struktur grid/flexbox yang terdeteksi (misal: navbar atas, sidebar kiri, main grid 3-kolom, footer).
+   - Ukuran kontainer lebar (misal: max-width 1200px, full-width).
+   - Responsivitas (bagaimana tata letak berubah pada mobile).
+6. **DAFTAR KOMPONEN UTAMA (UI COMPONENTS)**:
+   - Breakdown komponen penting (misal: tombol CTA, kartu info, kolom input, hero banner, accordion) beserta detail styling-nya.
+7. **PANDUAN VIBE CODING PROMPT**:
+   - Buat satu System Prompt / Developer Instruction khusus yang bisa langsung di-copy oleh user untuk dimasukkan ke AI Coding Assistant agar AI bisa membangun replika website dengan struktur, warna, font, dan nuansa yang identik.
+
+Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis CSS/HTML) dan gunakan format Markdown murni yang sangat bersih. Jangan sertakan teks pembuka atau penutup lain di luar Markdown tersebut.`;
+
+      const responseText = await generateContent(apiKey, prompt, aiProvider, aiModel);
+      setInspectorResult(responseText);
+
+      // Log to history
+      addHistory({
+        type: 'vibe-assets',
+        category: 'URL Inspector',
+        title: `Breakdown Desain ${targetUrl || 'HTML Tempel'}`,
+        content: responseText.slice(0, 500) + '...',
+        meta: { targetUrl: targetUrl || 'manual-html' }
+      });
+    } catch (err) {
+      setInspectorError(err.message || 'Gagal menganalisis desain website.');
+    } finally {
+      setIsInspecting(false);
+    }
+  };
+
   const mockup = getMockupStyles();
   const activeGuidelineText = activeSubTab === 'design' ? designMd : activeSubTab === 'style' ? styleMd : promptMd;
 
@@ -602,7 +741,7 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
           <Code size={32} /> Vibe Coding Hub
         </h1>
         <p style={{ color: 'var(--text-secondary)' }}>
-          Alat pendukung Vibe Coding: rancang guidelines desain visual, dan pangkas token log terminal Anda.
+          Alat pendukung Vibe Coding: rancang guidelines desain visual, analisis web inspirator, dan pangkas token log Anda.
         </p>
       </div>
 
@@ -629,6 +768,19 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
           }}
         >
           <Paintbrush size={16} /> Pedoman Proyek (design.md & style.md)
+        </button>
+        <button
+          onClick={() => setActiveTab('inspector')}
+          className="btn"
+          style={{
+            background: activeTab === 'inspector' ? 'var(--bg-card)' : 'transparent',
+            color: activeTab === 'inspector' ? 'var(--primary)' : 'var(--text-secondary)',
+            boxShadow: activeTab === 'inspector' ? 'var(--shadow-sm)' : 'none',
+            borderRadius: '8px',
+            padding: '0.6rem 1.25rem'
+          }}
+        >
+          <Code size={16} /> Inspector Desain Web
         </button>
         <button
           onClick={() => setActiveTab('token-killer')}
@@ -899,7 +1051,172 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
         </div>
       )}
 
-      {/* ===================== TAB 2: TOKEN KILLER ===================== */}
+      {/* ===================== TAB 2: URL INSPECTOR ===================== */}
+      {activeTab === 'inspector' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="card" style={{ borderTop: '4px solid var(--accent)' }}>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Code size={18} color="var(--accent)" /> Inspector Desain Web (URL Analyzer)
+            </h3>
+            
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              Masukkan tautan (link) website apa saja di bawah ini. AI akan menganalisis strukturnya, mengekstrak skema warna, font, layout, estetika, bahasa, dan menulis dokumen panduan Markdown (.md) yang siap di-copy paste ke AI Vibe Coding Anda.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <input 
+                  type="url" 
+                  className="input-field" 
+                  value={targetUrl} 
+                  onChange={(e) => setTargetUrl(e.target.value)} 
+                  placeholder="Contoh: https://example.com"
+                  style={{ margin: 0 }}
+                  disabled={isInspecting}
+                />
+                
+                <button
+                  className="btn btn-primary"
+                  onClick={handleInspectWebsite}
+                  disabled={isInspecting || (!targetUrl.trim() && !manualHtml.trim())}
+                  style={{ whiteSpace: 'nowrap', padding: '0.85rem 1.5rem', margin: 0, height: '48px' }}
+                >
+                  {isInspecting ? <RefreshCw size={18} className="animate-spin" /> : <Play size={18} />}
+                  {isInspecting ? 'Menganalisis...' : 'Analisis Desain'}
+                </button>
+              </div>
+
+              {/* API Key warning if missing */}
+              {!getApiKey() && (
+                <div style={{ 
+                  padding: '0.75rem 1rem', 
+                  borderRadius: '8px', 
+                  background: '#fffbeb', 
+                  border: '1px solid #f59e0b', 
+                  color: '#b45309',
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.5rem',
+                  marginTop: '0.5rem'
+                }}>
+                  <ShieldAlert size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div>
+                    API Key belum diatur. Silakan atur di <Link to="/settings" style={{ fontWeight: 'bold', textDecoration: 'underline', color: '#b45309' }}>Pengaturan</Link> terlebih dahulu untuk melakukan analisis AI.
+                  </div>
+                </div>
+              )}
+
+              {/* Proxy failure fallback / Manual HTML upload */}
+              {(isProxyFailed || !targetUrl.trim()) && (
+                <div style={{ 
+                  animation: 'slideUpFade 0.25s ease-out forwards',
+                  padding: '1.25rem',
+                  borderRadius: '10px',
+                  background: 'var(--bg-main)',
+                  border: '1px dashed var(--border-color)',
+                  marginTop: '0.5rem'
+                }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                    Cadangan: Tempel Kode HTML Halaman (View Source / Inspect)
+                  </label>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                    Jika situs memblokir pembacaan otomatis atau CORS error, klik kanan di web target → pilih **View Page Source**, salin semua kodenya (Ctrl+A / Cmd+A) lalu tempel di bawah.
+                  </p>
+                  <textarea
+                    className="input-field"
+                    rows={6}
+                    value={manualHtml}
+                    onChange={(e) => setManualHtml(e.target.value)}
+                    placeholder="<html><head>... tempel kode HTML halaman web target di sini ..."
+                    style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
+                    disabled={isInspecting}
+                  />
+                </div>
+              )}
+
+              {inspectorError && (
+                <div style={{ 
+                  color: '#dc2626', 
+                  fontSize: '0.85rem', 
+                  background: '#fef2f2', 
+                  border: '1px solid #fca5a5', 
+                  padding: '0.75rem 1rem', 
+                  borderRadius: '8px',
+                  marginTop: '0.5rem'
+                }}>
+                  ❌ {inspectorError}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Results Block */}
+          {(inspectorResult || isInspecting) && (
+            <div className="card" style={{ borderTop: '4px solid var(--success)', background: 'var(--bg-card)' }}>
+              {isInspecting && !inspectorResult ? (
+                <div style={{ textAlign: 'center', padding: '4rem' }}>
+                  <RefreshCw size={36} className="animate-spin" style={{ color: 'var(--primary)', marginBottom: '1.25rem' }} />
+                  <p style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
+                    Sedang mengunduh halaman dan mengekstrak aset desain...
+                  </p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.5rem' }}>
+                    AI sedang menyusun laporan markdown detail untuk vibe coding.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <h3 style={{ fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                      <Sparkles size={18} color="var(--success)" /> Hasil Breakdown Desain (Markdown)
+                    </h3>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        className="btn btn-secondary"
+                        onClick={() => handleCopyPedoman(inspectorResult)}
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                      >
+                        {copiedText ? <CheckCircle2 size={14} color="var(--success)" /> : <Clipboard size={14} />}
+                        {copiedText ? 'Tersalin' : 'Salin Laporan'}
+                      </button>
+                      <button 
+                        className="btn btn-secondary"
+                        onClick={() => handleDownloadPedoman('design_breakdown.md', inspectorResult)}
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                      >
+                        <Download size={14} /> Unduh (.md)
+                      </button>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
+                    💡 Sempurna untuk Vibe Coding! Copy laporan di bawah ini dan paste langsung ke Cursor / Copilot / Claude Code chat panel Anda.
+                  </p>
+
+                  <textarea
+                    readOnly
+                    className="input-field"
+                    value={inspectorResult}
+                    rows={18}
+                    style={{ 
+                      fontFamily: 'monospace', 
+                      fontSize: '0.85rem', 
+                      lineHeight: 1.6,
+                      backgroundColor: '#0f172a',
+                      color: '#f8fafc',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '1.25rem'
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ===================== TAB 3: TOKEN KILLER ===================== */}
       {activeTab === 'token-killer' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div className="card" style={{ borderTop: '4px solid var(--danger)' }}>
