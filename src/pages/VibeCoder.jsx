@@ -599,7 +599,7 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
   const cleanAndTruncateHtml = (html) => {
     if (!html) return '';
     
-    // Extract head
+    // 1. Extract head metadata (stylesheets, fonts, title)
     let headSnippet = '';
     const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
     if (headMatch) {
@@ -607,10 +607,21 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
       headSnippet = headContent
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '')
+        .replace(/<link[^>]*rel="preload"[^>]*>/gi, '')
         .trim();
     }
 
-    // Extract body
+    // 2. Extract style tags (CSS declarations)
+    let styleSnippet = '';
+    const styleMatches = html.match(/<style[^>]*>([\s\S]*?)<\/style>/gi);
+    if (styleMatches) {
+      styleSnippet = styleMatches.map(m => m.replace(/<style[^>]*>|<\/style>/gi, '')).join('\n');
+      if (styleSnippet.length > 8000) {
+        styleSnippet = styleSnippet.slice(0, 8000) + '\n... [Style rules truncated] ...';
+      }
+    }
+
+    // 3. Extract body structure (strip scripts, SVG paths, and comments)
     let bodySnippet = '';
     const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
     if (bodyMatch) {
@@ -619,21 +630,66 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, '')
         .replace(/<svg[^>]*>[\s\S]*?<\/svg>/gi, '[SVG Icon]')
-        .replace(/<!--[\s\S]*?-->/g, ''); 
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/\s+/g, ' ');
         
-      bodySnippet = bodyContent.slice(0, 25000);
-      if (bodyContent.length > 25000) {
+      bodySnippet = bodyContent.slice(0, 15000);
+      if (bodyContent.length > 15000) {
         bodySnippet += '\n... [HTML Body content truncated to save tokens] ...';
       }
     } else {
-      let partial = html
+      let cleanRaw = html
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<svg[^>]*>[\s\S]*?<\/svg>/gi, '[SVG]')
+        .replace(/\s+/g, ' ')
         .trim();
-      bodySnippet = partial.slice(0, 25000);
+      bodySnippet = cleanRaw.slice(0, 15000);
     }
 
-    return `--- HEAD ELEMENT ---\n${headSnippet.slice(0, 5000)}\n\n--- BODY ELEMENT (TRUNCATED) ---\n${bodySnippet}`;
+    return `--- TITEL & LINK ASSET ---\n${headSnippet.slice(0, 3000)}\n\n--- CSS STYLES ---\n${styleSnippet}\n\n--- STRUKTUR BODY Halaman ---\n${bodySnippet}`;
+  };
+
+  const fetchHtmlWithFallbackProxies = async (url) => {
+    // List of free public CORS proxies
+    const proxies = [
+      (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+      (u) => `https://api.codetabs.com/v1/proxy?quest=${u}`,
+      (u) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`
+    ];
+
+    let lastError = null;
+
+    for (let i = 0; i < proxies.length; i++) {
+      const proxyUrl = proxies[i](url);
+      try {
+        console.log(`Trying proxy ${i + 1}: ${proxyUrl}`);
+        const response = await fetch(proxyUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP Error ${response.status}`);
+        }
+        
+        if (proxyUrl.includes('allorigins.win')) {
+          const json = await response.json();
+          if (json && json.contents) {
+            return json.contents;
+          } else {
+            throw new Error('Empty content from AllOrigins');
+          }
+        } else {
+          const text = await response.text();
+          if (text && text.trim().length > 100) {
+            return text;
+          } else {
+            throw new Error('Empty or too short text response');
+          }
+        }
+      } catch (err) {
+        console.warn(`Proxy ${i + 1} failed:`, err.message);
+        lastError = err;
+      }
+    }
+
+    throw lastError || new Error('All CORS proxies failed to fetch the URL.');
   };
 
   const handleInspectWebsite = async () => {
@@ -656,22 +712,19 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
     let htmlContent = '';
 
     if (targetUrl.trim()) {
+      let formattedUrl = targetUrl.trim();
+      if (!/^https?:\/\//i.test(formattedUrl)) {
+        formattedUrl = `https://${formattedUrl}`;
+        setTargetUrl(formattedUrl);
+      }
+
       try {
-        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`);
-        if (!response.ok) {
-          throw new Error('Gagal menghubungi proxy server.');
-        }
-        const data = await response.json();
-        if (data && data.contents) {
-          htmlContent = data.contents;
-        } else {
-          throw new Error('Konten website kosong atau diblokir.');
-        }
+        htmlContent = await fetchHtmlWithFallbackProxies(formattedUrl);
       } catch (err) {
-        console.warn('CORS Proxy failed, falling back to manual paste HTML:', err.message);
+        console.warn('All CORS Proxies failed, falling back to manual paste HTML:', err.message);
         setIsProxyFailed(true);
         setIsInspecting(false);
-        setInspectorError('Gagal mengambil data dari URL secara otomatis (Terhalang kebijakan CORS target). Silakan gunakan kolom "Tempel Kode HTML" di bawah untuk menganalisis secara manual.');
+        setInspectorError('Gagal mengambil data dari URL secara otomatis (Terhalang CORS atau enkripsi Cloudflare). Silakan masukkan kode HTML-nya di panel "Tempel Kode HTML" di bawah.');
         return;
       }
     } else {
@@ -1066,7 +1119,7 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <input 
-                  type="url" 
+                  type="text" 
                   className="input-field" 
                   value={targetUrl} 
                   onChange={(e) => setTargetUrl(e.target.value)} 
