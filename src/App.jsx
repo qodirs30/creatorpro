@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { Home, Calendar, Edit3, Settings, LogOut, LayoutDashboard, Target, Wand2, Menu, X, Hash, Sparkles } from 'lucide-react';
+import { Home, Calendar, Edit3, Settings, LogOut, LayoutDashboard, Target, Wand2, Menu, X, Hash, Sparkles, Code } from 'lucide-react';
 import useAppStore from './store/useAppStore';
 import './index.css';
 
@@ -15,6 +15,7 @@ import HabitTracker from './pages/HabitTracker';
 import MegaPrompt from './pages/MegaPrompt';
 import ClickCounter from './pages/ClickCounter';
 import MemexJournal from './pages/MemexJournal';
+import VibeCoder from './pages/VibeCoder';
 
 function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
@@ -29,6 +30,7 @@ function Sidebar({ isOpen, onClose }) {
     { name: 'Penulis Naskah', path: '/scripting', icon: <Edit3 size={20} /> },
     { name: 'Perencana Konten', path: '/social', icon: <LayoutDashboard size={20} /> },
     { name: 'Jadwal Harian', path: '/planner', icon: <Calendar size={20} /> },
+    { name: 'Vibe Coding Hub', path: '/vibe-generator', icon: <Code size={20} /> },
     { name: 'Pengaturan', path: '/settings', icon: <Settings size={20} /> },
   ];
 
@@ -168,6 +170,7 @@ function AppLayout() {
           <Route path="/scripting" element={<ContentScripting />} />
           <Route path="/social" element={<SocialPlanner />} />
           <Route path="/planner" element={<DailyPlanner />} />
+          <Route path="/vibe-generator" element={<VibeCoder />} />
           <Route path="/settings" element={<AppSettings />} />
         </Routes>
       </main>

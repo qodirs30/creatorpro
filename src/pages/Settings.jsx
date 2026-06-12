@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import useAppStore from '../store/useAppStore';
-import { Key, Save, Shield, ExternalLink, Cpu, Image as ImageIcon, Video } from 'lucide-react';
+import { Key, Save, Shield, ExternalLink, Cpu, Image as ImageIcon, Video, Trash2, RefreshCw, Plus, Eye, EyeOff } from 'lucide-react';
 
 export default function Settings() {
   const { 
@@ -15,9 +15,16 @@ export default function Settings() {
     pin, setPin
   } = useAppStore();
 
-  const [localGemini, setLocalGemini] = useState(geminiKey);
-  const [localGroq, setLocalGroq] = useState(groqKey);
-  const [localOpenAi, setLocalOpenAi] = useState(openAiKey);
+  const splitKeys = (keyStr) => {
+    if (!keyStr) return [''];
+    const arr = keyStr.split(/[\s,]+/).map(k => k.trim()).filter(Boolean);
+    return arr.length > 0 ? arr : [''];
+  };
+
+  const [localGemini, setLocalGemini] = useState(() => splitKeys(geminiKey));
+  const [localGroq, setLocalGroq] = useState(() => splitKeys(groqKey));
+  const [localOpenAi, setLocalOpenAi] = useState(() => splitKeys(openAiKey));
+  
   const [localKlingAccess, setLocalKlingAccess] = useState(klingAccessKey);
   const [localKlingSecret, setLocalKlingSecret] = useState(klingSecretKey);
   
@@ -26,6 +33,9 @@ export default function Settings() {
   const [localEnablePinLock, setLocalEnablePinLock] = useState(enablePinLock);
   const [localPin, setLocalPin] = useState(pin);
   const [saved, setSaved] = useState(false);
+
+  const [showKeys, setShowKeys] = useState({});
+  const [keyStatuses, setKeyStatuses] = useState({});
 
   const textProviders = {
     gemini: {
@@ -61,14 +71,142 @@ export default function Settings() {
     setLocalModel(textProviders[newProv].models[0].id);
   };
 
+  const handleAddKeyField = (provider) => {
+    if (provider === 'gemini') {
+      setLocalGemini([...localGemini, '']);
+    } else if (provider === 'groq') {
+      setLocalGroq([...localGroq, '']);
+    } else if (provider === 'openai') {
+      setLocalOpenAi([...localOpenAi, '']);
+    }
+  };
+
+  const handleRemoveKeyField = (provider, index) => {
+    if (provider === 'gemini') {
+      const updated = localGemini.filter((_, i) => i !== index);
+      setLocalGemini(updated.length > 0 ? updated : ['']);
+    } else if (provider === 'groq') {
+      const updated = localGroq.filter((_, i) => i !== index);
+      setLocalGroq(updated.length > 0 ? updated : ['']);
+    } else if (provider === 'openai') {
+      const updated = localOpenAi.filter((_, i) => i !== index);
+      setLocalOpenAi(updated.length > 0 ? updated : ['']);
+    }
+    // Clean up status
+    const statusKey = `${provider}-${index}`;
+    if (keyStatuses[statusKey]) {
+      const updatedStatuses = { ...keyStatuses };
+      delete updatedStatuses[statusKey];
+      setKeyStatuses(updatedStatuses);
+    }
+  };
+
+  const handleKeyFieldChange = (provider, index, value) => {
+    if (provider === 'gemini') {
+      const updated = [...localGemini];
+      updated[index] = value;
+      setLocalGemini(updated);
+    } else if (provider === 'groq') {
+      const updated = [...localGroq];
+      updated[index] = value;
+      setLocalGroq(updated);
+    } else if (provider === 'openai') {
+      const updated = [...localOpenAi];
+      updated[index] = value;
+      setLocalOpenAi(updated);
+    }
+  };
+
+  const checkKeyConnection = async (provider, index, apiKey) => {
+    const keyId = `${provider}-${index}`;
+    if (!apiKey) {
+      setKeyStatuses(prev => ({
+        ...prev,
+        [keyId]: { status: 'error', message: 'API Key kosong.' }
+      }));
+      return;
+    }
+
+    setKeyStatuses(prev => ({
+      ...prev,
+      [keyId]: { status: 'checking' }
+    }));
+
+    const startTime = performance.now();
+    try {
+      let response;
+      if (provider === 'gemini') {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: 'Hi' }] }] })
+        });
+      } else if (provider === 'groq') {
+        response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'llama3-8b-8192',
+            messages: [{ role: 'user', content: 'Hi' }],
+            max_tokens: 5
+          })
+        });
+      } else if (provider === 'openai') {
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [{ role: 'user', content: 'Hi' }],
+            max_tokens: 5
+          })
+        });
+      }
+
+      const latency = Math.round(performance.now() - startTime);
+
+      if (response && response.ok) {
+        setKeyStatuses(prev => ({
+          ...prev,
+          [keyId]: { status: 'active', latency }
+        }));
+      } else {
+        const errData = response ? await response.json().catch(() => ({})) : {};
+        const msg = errData.error?.message || `HTTP ${response?.status || 'Error'}`;
+        setKeyStatuses(prev => ({
+          ...prev,
+          [keyId]: { status: 'error', message: msg }
+        }));
+      }
+    } catch (err) {
+      setKeyStatuses(prev => ({
+        ...prev,
+        [keyId]: { status: 'error', message: err.message || 'Gagal terhubung ke API' }
+      }));
+    }
+  };
+
   const handleSave = () => {
     if (localEnablePinLock && localPin.length !== 4) {
       alert('PIN harus berupa 4 digit angka!');
       return;
     }
-    setGeminiKey(localGemini);
-    setGroqKey(localGroq);
-    setOpenAiKey(localOpenAi);
+    
+    // Join arrays with newlines to store them back in useAppStore
+    const geminiStr = localGemini.map(k => k.trim()).filter(Boolean).join('\n');
+    const groqStr = localGroq.map(k => k.trim()).filter(Boolean).join('\n');
+    const openaiStr = localOpenAi.map(k => k.trim()).filter(Boolean).join('\n');
+
+    setGeminiKey(geminiStr);
+    setGroqKey(groqStr);
+    setOpenAiKey(openaiStr);
     setKlingAccessKey(localKlingAccess);
     setKlingSecretKey(localKlingSecret);
     setAiProvider(localProvider);
@@ -80,8 +218,142 @@ export default function Settings() {
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const renderKeySection = (provider, title, keysList, helpText, getUrl) => {
+    return (
+      <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+          <span style={{ fontWeight: '700', fontSize: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Key size={18} color="var(--primary)" /> {title}
+          </span>
+          <a href={getUrl} target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none' }}>
+            Dapatkan Key <ExternalLink size={14} />
+          </a>
+        </div>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {keysList.map((key, idx) => {
+            const keyId = `${provider}-${idx}`;
+            const statusInfo = keyStatuses[keyId];
+            const isVisible = showKeys[keyId];
+            
+            return (
+              <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <input 
+                      type={isVisible ? 'text' : 'password'}
+                      className="input-field" 
+                      placeholder={`Masukkan API Key #${idx + 1}`} 
+                      value={key} 
+                      onChange={(e) => handleKeyFieldChange(provider, idx, e.target.value)} 
+                      style={{ 
+                        fontFamily: 'monospace', 
+                        fontSize: '0.85rem',
+                        paddingRight: '2.5rem',
+                        margin: 0
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKeys(prev => ({ ...prev, [keyId]: !prev[keyId] }))}
+                      style={{
+                        position: 'absolute',
+                        right: '0.75rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      title={isVisible ? "Sembunyikan" : "Tampilkan"}
+                    >
+                      {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  
+                  {/* Ping check button */}
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => checkKeyConnection(provider, idx, key)}
+                    style={{ padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, height: '42px', width: '42px' }}
+                    disabled={statusInfo?.status === 'checking'}
+                    title="Cek Koneksi"
+                  >
+                    <RefreshCw size={16} className={statusInfo?.status === 'checking' ? 'animate-spin' : ''} />
+                  </button>
+                  
+                  {/* Delete button */}
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => handleRemoveKeyField(provider, idx)}
+                    style={{ padding: '0.75rem', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, height: '42px', width: '42px' }}
+                    disabled={keysList.length <= 1 && !key}
+                    title="Hapus Key"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+                
+                {/* Ping results badge */}
+                {statusInfo && (
+                  <div style={{ 
+                    fontSize: '0.75rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.4rem',
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '4px',
+                    width: 'fit-content',
+                    marginTop: '0.1rem',
+                    backgroundColor: statusInfo.status === 'checking' ? 'var(--bg-main)' :
+                                     statusInfo.status === 'active' ? '#ecfdf5' : '#fef2f2',
+                    color: statusInfo.status === 'checking' ? 'var(--text-secondary)' :
+                           statusInfo.status === 'active' ? '#059669' : '#dc2626',
+                    border: statusInfo.status === 'checking' ? '1px solid var(--border-color)' :
+                            statusInfo.status === 'active' ? '1px solid #10b981' : '1px solid #ef4444'
+                  }}>
+                    <span style={{ 
+                      width: '6px', 
+                      height: '6px', 
+                      borderRadius: '50%', 
+                      background: statusInfo.status === 'checking' ? '#94a3b8' :
+                                  statusInfo.status === 'active' ? '#10b981' : '#ef4444',
+                      display: 'inline-block'
+                    }} />
+                    {statusInfo.status === 'checking' && 'Menghubungkan...'}
+                    {statusInfo.status === 'active' && `Aktif (${statusInfo.latency} ms)`}
+                    {statusInfo.status === 'error' && `Error: ${statusInfo.message}`}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => handleAddKeyField(provider)}
+          style={{ width: '100%', borderStyle: 'dashed', borderWidth: '1.5px', justifyContent: 'center', padding: '0.6rem', marginTop: '0.25rem' }}
+        >
+          <Plus size={16} /> Tambah Key Baru
+        </button>
+        
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+          {helpText}
+        </p>
+      </div>
+    );
+  };
+
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', paddingBottom: '3rem' }}>
+    <div style={{ maxWidth: '850px', margin: '0 auto', paddingBottom: '3rem' }}>
       <h1 className="text-gradient" style={{ marginBottom: '2rem', fontSize: '2.5rem' }}>qodirs pro creator — API & Konfigurasi</h1>
       
       <p style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>
@@ -176,97 +448,75 @@ export default function Settings() {
       </div>
 
       {/* ===================== BRANKAS API KEYS ===================== */}
-      <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <Key size={20} color="var(--primary)" /> Brankas API Keys
+      <h2 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: '700' }}>
+        <Key size={24} color="var(--primary)" /> Brankas API Keys
       </h2>
       
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
         
         {/* Gemini */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontWeight: '600' }}>
-            <span>Google Gemini (Veo/Teks)</span>
-            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              Dapatkan <ExternalLink size={12} />
-            </a>
-          </label>
-          <textarea 
-            className="input-field" 
-            placeholder="AIzaSy...&#10;AIzaSy... (Satu key per baris)" 
-            value={localGemini} 
-            onChange={(e) => setLocalGemini(e.target.value)} 
-            rows={3}
-            style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.85rem' }}
-          />
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-            Wajib untuk Veo 3, RPG, dan Memex. <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Bisa masukkan beberapa key (satu per baris) untuk rotasi otomatis.</span>
-          </p>
-        </div>
+        {renderKeySection(
+          'gemini',
+          'Google Gemini (Veo/Teks)',
+          localGemini,
+          'Wajib untuk Veo 3, RPG, dan Memex. Beberapa key yang terdaftar akan dirotasi secara otomatis.',
+          'https://aistudio.google.com/app/apikey'
+        )}
+
+        {/* Groq */}
+        {renderKeySection(
+          'groq',
+          'Groq Cloud (Llama/Mixtral)',
+          localGroq,
+          'Kunci API Groq. Beberapa key yang terdaftar akan dirotasi secara otomatis.',
+          'https://console.groq.com/keys'
+        )}
+
+        {/* OpenAI */}
+        {renderKeySection(
+          'openai',
+          'OpenAI (GPT-4o/3.5)',
+          localOpenAi,
+          'Kunci API OpenAI. Beberapa key yang terdaftar akan dirotasi secara otomatis.',
+          'https://platform.openai.com/api-keys'
+        )}
 
         {/* Kling - Access Key */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontWeight: '600' }}>
-            <span>Kling AI — Access Key</span>
-            <a href="https://app.klingai.com/global/dev/document-api/quickStart/tokenBuild" target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              Dapatkan <ExternalLink size={12} />
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+            <span style={{ fontWeight: '700', fontSize: '1rem', color: 'var(--text-primary)' }}>Kling AI — Access Key</span>
+            <a href="https://app.klingai.com/global/dev/document-api/quickStart/tokenBuild" target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none' }}>
+              Dapatkan <ExternalLink size={14} />
             </a>
-          </label>
-          <input type="password" className="input-field" placeholder="Access Key (ak-...)" value={localKlingAccess} onChange={(e) => setLocalKlingAccess(e.target.value)} />
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Kunci publik dari dashboard Kling AI.</p>
+          </div>
+          <input 
+            type="password" 
+            className="input-field" 
+            placeholder="Access Key (ak-...)" 
+            value={localKlingAccess} 
+            onChange={(e) => setLocalKlingAccess(e.target.value)} 
+            style={{ margin: 0 }}
+          />
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>Kunci publik dari dashboard Kling AI.</p>
         </div>
 
         {/* Kling - Secret Key */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontWeight: '600' }}>
-            <span>Kling AI — Secret Key</span>
-            <a href="https://app.klingai.com/global/dev/document-api/quickStart/tokenBuild" target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              Docs <ExternalLink size={12} />
+        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+            <span style={{ fontWeight: '700', fontSize: '1rem', color: 'var(--text-primary)' }}>Kling AI — Secret Key</span>
+            <a href="https://app.klingai.com/global/dev/document-api/quickStart/tokenBuild" target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none' }}>
+              Docs <ExternalLink size={14} />
             </a>
-          </label>
-          <input type="password" className="input-field" placeholder="Secret Key (sk-...)" value={localKlingSecret} onChange={(e) => setLocalKlingSecret(e.target.value)} />
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Secret Key — dipakai bareng Access Key untuk generate JWT token.</p>
-        </div>
-
-        {/* Groq */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontWeight: '600' }}>
-            <span>Groq Cloud</span>
-            <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              Dapatkan <ExternalLink size={12} />
-            </a>
-          </label>
-          <textarea 
+          </div>
+          <input 
+            type="password" 
             className="input-field" 
-            placeholder="gsk_...&#10;gsk_... (Satu key per baris)" 
-            value={localGroq} 
-            onChange={(e) => setLocalGroq(e.target.value)} 
-            rows={3}
-            style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.85rem' }}
+            placeholder="Secret Key (sk-...)" 
+            value={localKlingSecret} 
+            onChange={(e) => setLocalKlingSecret(e.target.value)} 
+            style={{ margin: 0 }}
           />
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-            Kunci API Groq. <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Bisa masukkan beberapa key (satu per baris) untuk rotasi otomatis.</span>
-          </p>
-        </div>
-
-        {/* OpenAI */}
-        <div className="card" style={{ padding: '1.25rem' }}>
-          <label style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontWeight: '600' }}>
-            <span>OpenAI (GPT)</span>
-            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-              Dapatkan <ExternalLink size={12} />
-            </a>
-          </label>
-          <textarea 
-            className="input-field" 
-            placeholder="sk-...&#10;sk-... (Satu key per baris)" 
-            value={localOpenAi} 
-            onChange={(e) => setLocalOpenAi(e.target.value)} 
-            rows={3}
-            style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '0.85rem' }}
-          />
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-            Kunci API OpenAI. <span style={{ color: 'var(--primary)', fontWeight: 'bold' }}>Bisa masukkan beberapa key (satu per baris) untuk rotasi otomatis.</span>
-          </p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>Secret Key — dipakai bareng Access Key untuk generate JWT token.</p>
         </div>
 
       </div>
