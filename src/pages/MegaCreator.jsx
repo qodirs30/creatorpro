@@ -941,10 +941,10 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                     {/* Device Selector */}
                     {devices.length > 0 && cameraActive && (
                       <select
-                        className="input-field"
+                        className="input-field teleprompter-device-select"
                         value={selectedDevice}
                         onChange={(e) => setSelectedDevice(e.target.value)}
-                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: '130px', height: '32px' }}
+                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', height: '32px' }}
                       >
                         {devices.map(d => (
                           <option key={d.deviceId} value={d.deviceId}>
@@ -957,10 +957,10 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                     {/* Resolution Selector */}
                     {cameraActive && (
                       <select
-                        className="input-field"
+                        className="input-field teleprompter-res-select"
                         value={cameraResolution}
                         onChange={(e) => setCameraResolution(e.target.value)}
-                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', width: '90px', height: '32px' }}
+                        style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', height: '32px' }}
                         title="Pilih Resolusi Perekaman"
                       >
                         <option value="720p">720p HD</option>
@@ -1232,6 +1232,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
                       onScroll={handleTeleprompterScroll}
                       className="teleprompter-text-viewport teleprompter-scrollbar"
                       style={{
+                        width: '100%',
                         maxWidth: `${teleWidth}px`,
                         fontSize: `${teleFontSize}px`,
                         lineHeight: teleLineHeight,

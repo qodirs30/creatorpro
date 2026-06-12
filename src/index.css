@@ -740,4 +740,49 @@ input, textarea, select {
   }
 }
 
+/* ==========================================================================
+   VIEWPORT FIT & OVERFLOW LOCK FIXES
+   ========================================================================== */
+
+/* Prevent horizontal overflow on the page level */
+@media (max-width: 768px) {
+  .main-content {
+    width: 100% !important;
+    padding: 4.5rem 1rem 1.5rem 1rem !important;
+    overflow-x: hidden !important;
+  }
+}
+
+/* CSS Grid item shrink fix */
+.memex-layout-left {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+.memex-companion-panel {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+.mega-creator-workspace-grid > div {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+/* Responsive select classes for Teleprompter camera toolbar */
+.teleprompter-device-select {
+  width: 130px !important;
+}
+.teleprompter-res-select {
+  width: 90px !important;
+}
+
+@media (max-width: 768px) {
+  .teleprompter-device-select,
+  .teleprompter-res-select {
+    width: 48% !important;
+    flex: none !important;
+    min-width: 0 !important;
+  }
+}
+
+
 

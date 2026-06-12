@@ -232,7 +232,7 @@ export default function MemexJournal() {
                 value={textCapture}
                 onChange={(e) => setTextCapture(e.target.value)}
                 disabled={loadingCapture}
-                style={{ flex: 1 }}
+                style={{ flex: 1, width: '100%' }}
               />
               <button 
                 type="submit" 
