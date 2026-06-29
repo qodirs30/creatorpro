@@ -12,6 +12,12 @@ const useAppStore = create(
       enablePinLock: false,
       setEnablePinLock: (enabled) => set({ enablePinLock: enabled }),
 
+      // Firebase Authentication & Sync
+      firebaseUser: null,
+      setFirebaseUser: (user) => set({ firebaseUser: user }),
+      isAuthActive: false,
+      setIsAuthActive: (active) => set({ isAuthActive: active }),
+
       // Kunci API AI Berdasarkan Penyedia
       geminiKey: '', setGeminiKey: (k) => set({ geminiKey: k }),
       groqKey: '', setGroqKey: (k) => set({ groqKey: k }),
@@ -131,6 +137,10 @@ const useAppStore = create(
       deleteMemexCard: (id) => set((state) => ({
         memexCards: state.memexCards.filter(c => c.id !== id)
       })),
+      setMemexCards: (cards) => set({ memexCards: cards }),
+      updateMemexCard: (id, updates) => set((state) => ({
+        memexCards: state.memexCards.map(c => c.id === id ? { ...c, ...updates } : c)
+      })),
       memexCompanion: {
         name: 'Suki',
         personality: 'teman gaul', // teman gaul, asisten galak, filsuf bijak
@@ -145,6 +155,12 @@ const useAppStore = create(
         memexChats: [...state.memexChats, { id: Date.now().toString(), timestamp: new Date().toISOString(), ...chat }]
       })),
       clearMemexChats: () => set({ memexChats: [] }),
+
+      // ================= BASIS PENGETAHUAN SUKI =================
+      sukiKnowledge: { content: '', updatedAt: new Date(0).toISOString() },
+      setSukiKnowledge: (content) => set({
+        sukiKnowledge: { content, updatedAt: new Date().toISOString() }
+      }),
 
       // ================= HISTORY / JEJAK AKTIVITAS =================
       // Format: { id, type, category, title, content, meta, date }
@@ -164,9 +180,33 @@ const useAppStore = create(
         history: state.history.filter(h => h.id !== id)
       })),
       clearHistory: () => set({ history: [] }),
+      restoreBackup: (data) => set({
+        memexCards: data.memexCards || [],
+        habits: data.habits || [],
+        scripts: data.scripts || [],
+        socialPosts: data.socialPosts || [],
+        counters: data.counters || [],
+        activityLog: data.activityLog || [],
+        history: data.history || [],
+        sukiKnowledge: data.sukiKnowledge || { content: '', updatedAt: new Date(0).toISOString() },
+        geminiKey: data.geminiKey || '',
+        groqKey: data.groqKey || '',
+        openAiKey: data.openAiKey || '',
+        klingAccessKey: data.klingAccessKey || '',
+        klingSecretKey: data.klingSecretKey || '',
+        aiProvider: data.aiProvider || 'gemini',
+        aiModel: data.aiModel || 'gemini-2.5-flash',
+        enablePinLock: data.enablePinLock ?? false,
+        pin: data.pin || '1234',
+      }),
     }),
     {
-      name: 'procreator-storage-v2', // Ganti nama agar reset jika skema berubah drastis
+      name: 'qodirsai-storage-v1', // Ganti nama agar reset jika skema berubah drastis
+      partialize: (state) => {
+        const rest = { ...state };
+        delete rest.firebaseUser;
+        return rest;
+      }
     }
   )
 );

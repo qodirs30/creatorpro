@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
 import { generateContent } from '../utils/ai';
 import { 
   Terminal, Code, Clipboard, Download, Play, RefreshCw, Zap, 
-  ShieldAlert, Sparkles, Paintbrush, HelpCircle, FileText, CheckCircle2, ChevronRight
+  ShieldAlert, Sparkles, Paintbrush, FileText, CheckCircle2
 } from 'lucide-react';
 
 export default function VibeCoder() {
@@ -16,6 +16,7 @@ export default function VibeCoder() {
   // Tab 1: Pedoman Proyek State
   const [theme, setTheme] = useState('Toko Kopi Online');
   const [aesthetic, setAesthetic] = useState('glassmorphism'); // 'glassmorphism' | 'neobrutalism' | 'minimalist' | 'cyberpunk'
+  const [designSystem, setDesignSystem] = useState('none'); // 'none' | 'stripe' | 'linear' | 'vercel' | 'apple' | 'supabase' | 'figma' | 'obsidian' | 'things' | 'discord' | 'slack' | 'raycast'
   const [primaryColor, setPrimaryColor] = useState('#4f46e5');
   const [specialNotes, setSpecialNotes] = useState('');
   
@@ -52,6 +53,644 @@ export default function VibeCoder() {
 
   // Dynamic Styles for Mockup Preview
   const getMockupStyles = () => {
+    // If a design system reference is selected, override with specific design system styles
+    if (designSystem !== 'none') {
+      switch (designSystem) {
+        case 'stripe':
+          return {
+            container: {
+              background: 'linear-gradient(135deg, #f6f9fc 0%, #eef2f7 100%)',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              border: '1px solid rgba(0, 0, 0, 0.05)',
+              minHeight: '220px'
+            },
+            card: {
+              background: '#ffffff',
+              border: '1px solid rgba(0, 0, 0, 0.05)',
+              borderRadius: '8px',
+              padding: '1.25rem',
+              color: '#32325d',
+              boxShadow: '0 15px 35px rgba(50, 50, 93, 0.1), 0 5px 15px rgba(0, 0, 0, 0.07)',
+              width: '100%',
+              maxWidth: '300px',
+              fontFamily: "'Inter', sans-serif"
+            },
+            title: {
+              color: '#1a1f36',
+              fontWeight: '700',
+              fontSize: '1.15rem',
+              letterSpacing: '-0.01em',
+              marginBottom: '0.25rem',
+              display: 'block'
+            },
+            subtitle: {
+              color: '#697386',
+              fontSize: '0.75rem',
+              marginBottom: '1rem',
+              display: 'block'
+            },
+            stat: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '0.75rem',
+              color: '#4f566b',
+              borderBottom: '1px solid #f6f9fc',
+              paddingBottom: '0.5rem',
+              marginBottom: '1rem'
+            },
+            button: {
+              background: '#5469d4',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              borderRadius: '4px',
+              fontWeight: '600',
+              border: 'none',
+              fontSize: '0.8rem',
+              width: '100%',
+              cursor: 'pointer',
+              boxShadow: '0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08)'
+            }
+          };
+        case 'linear':
+          return {
+            container: {
+              background: '#09080f',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              minHeight: '220px'
+            },
+            card: {
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '8px',
+              padding: '1.25rem',
+              color: '#ffffff',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+              width: '100%',
+              maxWidth: '300px',
+              fontFamily: "'Inter', sans-serif"
+            },
+            title: {
+              color: '#ffffff',
+              fontWeight: '600',
+              fontSize: '1.15rem',
+              letterSpacing: '-0.02em',
+              marginBottom: '0.25rem',
+              display: 'block'
+            },
+            subtitle: {
+              color: '#b4bcd0',
+              fontSize: '0.75rem',
+              marginBottom: '1rem',
+              display: 'block'
+            },
+            stat: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '0.75rem',
+              color: '#8a8f98',
+              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              paddingBottom: '0.5rem',
+              marginBottom: '1rem'
+            },
+            button: {
+              background: '#5e6ad2',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              fontWeight: '500',
+              border: 'none',
+              fontSize: '0.8rem',
+              width: '100%',
+              cursor: 'pointer'
+            }
+          };
+        case 'vercel':
+          return {
+            container: {
+              background: '#ffffff',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              border: '1px solid #eaeaea',
+              minHeight: '220px'
+            },
+            card: {
+              background: '#ffffff',
+              border: '1px solid #000000',
+              borderRadius: '0px',
+              padding: '1.25rem',
+              color: '#000000',
+              boxShadow: '0px 0px 0px 1px #000000',
+              width: '100%',
+              maxWidth: '300px',
+              fontFamily: "'Inter', sans-serif"
+            },
+            title: {
+              color: '#000000',
+              fontWeight: '700',
+              fontSize: '1.15rem',
+              letterSpacing: '-0.03em',
+              marginBottom: '0.25rem',
+              display: 'block'
+            },
+            subtitle: {
+              color: '#666666',
+              fontSize: '0.75rem',
+              marginBottom: '1rem',
+              display: 'block'
+            },
+            stat: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '0.75rem',
+              color: '#444444',
+              borderBottom: '1px solid #eaeaea',
+              paddingBottom: '0.5rem',
+              marginBottom: '1rem'
+            },
+            button: {
+              background: '#000000',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              borderRadius: '0px',
+              fontWeight: '600',
+              border: '1px solid #000000',
+              fontSize: '0.8rem',
+              width: '100%',
+              cursor: 'pointer'
+            }
+          };
+        case 'apple':
+          return {
+            container: {
+              background: '#f5f5f7',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '220px'
+            },
+            card: {
+              background: 'rgba(255, 255, 255, 0.8)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '18px',
+              padding: '1.5rem',
+              color: '#1d1d1f',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.04)',
+              width: '100%',
+              maxWidth: '300px',
+              fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+            },
+            title: {
+              color: '#1d1d1f',
+              fontWeight: '600',
+              fontSize: '1.2rem',
+              letterSpacing: '-0.02em',
+              marginBottom: '0.25rem',
+              display: 'block'
+            },
+            subtitle: {
+              color: '#86868b',
+              fontSize: '0.75rem',
+              marginBottom: '1rem',
+              display: 'block'
+            },
+            stat: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '0.75rem',
+              color: '#515154',
+              borderBottom: '1px solid #e8e8ed',
+              paddingBottom: '0.5rem',
+              marginBottom: '1rem'
+            },
+            button: {
+              background: '#0071e3',
+              color: '#ffffff',
+              padding: '0.6rem 1rem',
+              borderRadius: '980px',
+              fontWeight: '500',
+              border: 'none',
+              fontSize: '0.8rem',
+              width: '100%',
+              cursor: 'pointer'
+            }
+          };
+        case 'supabase':
+          return {
+            container: {
+              background: '#1c1c1c',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              border: '1px solid #2e2e2e',
+              minHeight: '220px'
+            },
+            card: {
+              background: '#171717',
+              border: '1px solid #2e2e2e',
+              borderRadius: '6px',
+              padding: '1.25rem',
+              color: '#ededed',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              width: '100%',
+              maxWidth: '300px',
+              fontFamily: "'Inter', sans-serif"
+            },
+            title: {
+              color: '#ffffff',
+              fontWeight: '600',
+              fontSize: '1.15rem',
+              marginBottom: '0.25rem',
+              display: 'block'
+            },
+            subtitle: {
+              color: '#888888',
+              fontSize: '0.75rem',
+              marginBottom: '1rem',
+              display: 'block'
+            },
+            stat: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '0.75rem',
+              color: '#3ecf8e',
+              borderBottom: '1px solid #2e2e2e',
+              paddingBottom: '0.5rem',
+              marginBottom: '1rem'
+            },
+            button: {
+              background: '#3ecf8e',
+              color: '#000000',
+              padding: '0.5rem 1rem',
+              borderRadius: '4px',
+              fontWeight: '600',
+              border: 'none',
+              fontSize: '0.8rem',
+              width: '100%',
+              cursor: 'pointer'
+            }
+          };
+        case 'figma':
+          return {
+            container: {
+              background: '#2c2c2c',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '220px'
+            },
+            card: {
+              background: '#1e1e1e',
+              border: '1px solid #333333',
+              borderRadius: '6px',
+              padding: '1.25rem',
+              color: '#e6e6e6',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+              width: '100%',
+              maxWidth: '300px',
+              fontFamily: "'Inter', sans-serif"
+            },
+            title: {
+              color: '#ffffff',
+              fontWeight: '500',
+              fontSize: '1.1rem',
+              marginBottom: '0.25rem',
+              display: 'block'
+            },
+            subtitle: {
+              color: '#b3b3b3',
+              fontSize: '0.75rem',
+              marginBottom: '1rem',
+              display: 'block'
+            },
+            stat: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '0.75rem',
+              color: '#e6e6e6',
+              background: '#2c2c2c',
+              padding: '0.4rem',
+              borderRadius: '4px',
+              marginBottom: '1rem'
+            },
+            button: {
+              background: '#0c8ce9',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              fontWeight: '500',
+              border: 'none',
+              fontSize: '0.8rem',
+              width: '100%',
+              cursor: 'pointer'
+            }
+          };
+        case 'obsidian':
+          return {
+            container: {
+              background: '#161618',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              border: '1px solid #202022',
+              minHeight: '220px'
+            },
+            card: {
+              background: '#202022',
+              border: '1px solid #343438',
+              borderRadius: '6px',
+              padding: '1.25rem',
+              color: '#e3e3e3',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+              width: '100%',
+              maxWidth: '300px',
+              fontFamily: "'Inter', sans-serif"
+            },
+            title: {
+              color: '#ffffff',
+              fontWeight: '600',
+              fontSize: '1.15rem',
+              marginBottom: '0.25rem',
+              display: 'block'
+            },
+            subtitle: {
+              color: '#9a9a9a',
+              fontSize: '0.75rem',
+              marginBottom: '1rem',
+              display: 'block'
+            },
+            stat: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '0.75rem',
+              color: '#8b5cf6',
+              borderBottom: '1px solid #343438',
+              paddingBottom: '0.5rem',
+              marginBottom: '1rem'
+            },
+            button: {
+              background: '#7c3aed',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              borderRadius: '4px',
+              fontWeight: '500',
+              border: 'none',
+              fontSize: '0.8rem',
+              width: '100%',
+              cursor: 'pointer'
+            }
+          };
+        case 'things':
+          return {
+            container: {
+              background: '#f4f4f6',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '220px'
+            },
+            card: {
+              background: '#ffffff',
+              border: '1px solid #e5e5e7',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              color: '#3a3a3c',
+              boxShadow: '0 10px 40px rgba(0,0,0,0.06)',
+              width: '100%',
+              maxWidth: '300px',
+              fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif"
+            },
+            title: {
+              color: '#1c1c1e',
+              fontWeight: '600',
+              fontSize: '1.15rem',
+              marginBottom: '0.25rem',
+              display: 'block'
+            },
+            subtitle: {
+              color: '#8e8e93',
+              fontSize: '0.75rem',
+              marginBottom: '1rem',
+              display: 'block'
+            },
+            stat: {
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.75rem',
+              color: '#34c759',
+              fontWeight: '600',
+              marginBottom: '1rem'
+            },
+            button: {
+              background: '#2f80ed',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              borderRadius: '6px',
+              fontWeight: '600',
+              border: 'none',
+              fontSize: '0.8rem',
+              width: '100%',
+              cursor: 'pointer'
+            }
+          };
+        case 'discord':
+          return {
+            container: {
+              background: '#202225',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              minHeight: '220px'
+            },
+            card: {
+              background: '#2f3136',
+              borderRadius: '8px',
+              padding: '1.25rem',
+              color: '#dcddde',
+              width: '100%',
+              maxWidth: '300px',
+              fontFamily: "'GG Sans', 'Noto Sans', sans-serif"
+            },
+            title: {
+              color: '#ffffff',
+              fontWeight: '700',
+              fontSize: '1.1rem',
+              marginBottom: '0.25rem',
+              display: 'block'
+            },
+            subtitle: {
+              color: '#b9bbbe',
+              fontSize: '0.75rem',
+              marginBottom: '1rem',
+              display: 'block'
+            },
+            stat: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '0.75rem',
+              color: '#b9bbbe',
+              background: '#202225',
+              padding: '0.5rem',
+              borderRadius: '4px',
+              marginBottom: '1rem'
+            },
+            button: {
+              background: '#5865f2',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              borderRadius: '3px',
+              fontWeight: '500',
+              border: 'none',
+              fontSize: '0.8rem',
+              width: '100%',
+              cursor: 'pointer'
+            }
+          };
+        case 'slack':
+          return {
+            container: {
+              background: '#f8f8f8',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              border: '1px solid #e8e8e8',
+              minHeight: '220px'
+            },
+            card: {
+              background: '#ffffff',
+              border: '1px solid #dddddd',
+              borderRadius: '8px',
+              padding: '1.25rem',
+              color: '#1d1c1d',
+              width: '100%',
+              maxWidth: '300px',
+              fontFamily: "'Slack-Lato', Lato, sans-serif"
+            },
+            title: {
+              color: '#1d1c1d',
+              fontWeight: '900',
+              fontSize: '1.15rem',
+              marginBottom: '0.25rem',
+              display: 'block'
+            },
+            subtitle: {
+              color: '#616061',
+              fontSize: '0.75rem',
+              marginBottom: '1rem',
+              display: 'block'
+            },
+            stat: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '0.75rem',
+              color: '#e01e5a',
+              fontWeight: 'bold',
+              borderLeft: '3px solid #e01e5a',
+              paddingLeft: '0.5rem',
+              marginBottom: '1rem'
+            },
+            button: {
+              background: '#007a5a',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              borderRadius: '4px',
+              fontWeight: '700',
+              border: 'none',
+              fontSize: '0.8rem',
+              width: '100%',
+              cursor: 'pointer'
+            }
+          };
+        case 'raycast':
+          return {
+            container: {
+              background: 'radial-gradient(circle at top, #2b273f 0%, #151324 100%)',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              minHeight: '220px'
+            },
+            card: {
+              background: 'rgba(23, 22, 38, 0.7)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: '12px',
+              padding: '1.25rem',
+              color: '#f3f4f6',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+              width: '100%',
+              maxWidth: '300px',
+              fontFamily: "'Inter', sans-serif"
+            },
+            title: {
+              color: '#ffffff',
+              fontWeight: '600',
+              fontSize: '1.1rem',
+              marginBottom: '0.25rem',
+              display: 'block'
+            },
+            subtitle: {
+              color: '#a1a1aa',
+              fontSize: '0.75rem',
+              marginBottom: '1rem',
+              display: 'block'
+            },
+            stat: {
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontSize: '0.75rem',
+              color: '#ff62b0',
+              fontWeight: '600',
+              marginBottom: '1rem'
+            },
+            button: {
+              background: 'rgba(255, 255, 255, 0.08)',
+              color: '#ffffff',
+              padding: '0.5rem 1rem',
+              borderRadius: '8px',
+              fontWeight: '600',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              fontSize: '0.8rem',
+              width: '100%',
+              cursor: 'pointer'
+            }
+          };
+      }
+    }
+
+    // Default aesthetic styling
     switch (aesthetic) {
       case 'neobrutalism':
         return {
@@ -314,12 +953,13 @@ export default function VibeCoder() {
 Pengguna memberikan spesifikasi berikut:
 - Tema/Nama Proyek: "${theme}"
 - Estetika/Style Desain: "${aesthetic}"
+- Referensi Design System (ihlamury): "${designSystem !== 'none' ? designSystem : 'Tidak ada'}"
 - Warna Utama: "${primaryColor}"
 - Catatan Khusus: "${specialNotes}"
 
 Hasilkan tiga dokumen spesifik:
-1. design.md: Panduan arsitektur layout, komponen inti, struktur folder, tipografi, dan petunjuk UX.
-2. style.md: Kode CSS (custom properties), class utility, scrollbar, animations, dan class pendukung estetika "${aesthetic}".
+1. design.md: Panduan arsitektur layout, komponen inti, struktur folder, tipografi, dan petunjuk UX (masukkan prinsip-prinsip desain dari referensi design system "${designSystem}" jika terpilih).
+2. style.md: Kode CSS (custom properties), class utility, scrollbar, animations, dan class pendukung estetika "${aesthetic}" (serta kelas penunjang untuk design system "${designSystem}" jika terpilih).
 3. prompt.md: System instructions / prompt developer untuk AI coding assistant agar mematuhi design.md dan style.md ini secara ketat.
 
 Kembalikan jawaban dengan format pemisah yang sangat ketat seperti ini:
@@ -365,7 +1005,7 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
         category: 'Pedoman Vibe',
         title: `Asset untuk ${theme}`,
         content: `design.md & style.md generated for theme: ${theme}`,
-        meta: { theme, aesthetic, primaryColor }
+        meta: { theme, aesthetic, designSystem, primaryColor }
       });
     } catch (err) {
       setPedomanError(err.message || 'Gagal menghasilkan pedoman proyek.');
@@ -418,7 +1058,7 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
         }
       }
 
-      let compressed = '';
+      let compressed;
 
       if (detectedType === 'git') {
         let branch = 'unknown';
@@ -622,7 +1262,7 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
     }
 
     // 3. Extract body structure (strip scripts, SVG paths, and comments)
-    let bodySnippet = '';
+    let bodySnippet;
     const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
     if (bodyMatch) {
       let bodyContent = bodyMatch[1];
@@ -709,7 +1349,7 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
     setInspectorResult('');
     setIsProxyFailed(false);
 
-    let htmlContent = '';
+    let htmlContent;
 
     if (targetUrl.trim()) {
       let formattedUrl = targetUrl.trim();
@@ -807,7 +1447,11 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
         borderRadius: '10px', 
         border: '1px solid var(--border-color)', 
         marginBottom: '2rem',
-        width: 'fit-content'
+        width: '100%',
+        overflowX: 'auto',
+        whiteSpace: 'nowrap',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none'
       }}>
         <button
           onClick={() => setActiveTab('pedoman')}
@@ -817,7 +1461,8 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
             color: activeTab === 'pedoman' ? 'var(--primary)' : 'var(--text-secondary)',
             boxShadow: activeTab === 'pedoman' ? 'var(--shadow-sm)' : 'none',
             borderRadius: '8px',
-            padding: '0.6rem 1.25rem'
+            padding: '0.6rem 1.25rem',
+            flexShrink: 0
           }}
         >
           <Paintbrush size={16} /> Pedoman Proyek (design.md & style.md)
@@ -830,7 +1475,8 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
             color: activeTab === 'inspector' ? 'var(--primary)' : 'var(--text-secondary)',
             boxShadow: activeTab === 'inspector' ? 'var(--shadow-sm)' : 'none',
             borderRadius: '8px',
-            padding: '0.6rem 1.25rem'
+            padding: '0.6rem 1.25rem',
+            flexShrink: 0
           }}
         >
           <Code size={16} /> Inspector Desain Web
@@ -843,7 +1489,8 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
             color: activeTab === 'token-killer' ? 'var(--primary)' : 'var(--text-secondary)',
             boxShadow: activeTab === 'token-killer' ? 'var(--shadow-sm)' : 'none',
             borderRadius: '8px',
-            padding: '0.6rem 1.25rem'
+            padding: '0.6rem 1.25rem',
+            flexShrink: 0
           }}
         >
           <Terminal size={16} /> Token Killer (Log Compressor)
@@ -888,22 +1535,44 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
                     </select>
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>Warna Utama (Primary)</label>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <input 
-                        type="color" 
-                        value={primaryColor} 
-                        onChange={(e) => setPrimaryColor(e.target.value)} 
-                        style={{ width: '42px', height: '42px', padding: '0', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer', background: 'transparent' }}
-                      />
-                      <input 
-                        type="text" 
-                        className="input-field" 
-                        value={primaryColor} 
-                        onChange={(e) => setPrimaryColor(e.target.value)} 
-                        style={{ fontFamily: 'monospace', fontSize: '0.85rem', padding: '0.5rem' }}
-                      />
-                    </div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>Referensi Design System (ihlamury)</label>
+                    <select 
+                      className="input-field" 
+                      value={designSystem} 
+                      onChange={(e) => setDesignSystem(e.target.value)}
+                    >
+                      <option value="none">Tanpa Referensi Khusus (Bawaan)</option>
+                      <option value="stripe">Stripe (Fintech, Modern Light)</option>
+                      <option value="linear">Linear (Premium Dark, 4px grid)</option>
+                      <option value="vercel">Vercel (Minimal Monochrome)</option>
+                      <option value="apple">Apple (Cupertino Premium, Light)</option>
+                      <option value="supabase">Supabase (Sleek DB Mode, Green Accents)</option>
+                      <option value="figma">Figma (Collaborative UI, Dark)</option>
+                      <option value="obsidian">Obsidian (Markdown Graph, Dark)</option>
+                      <option value="things">Things (Cupertino Todo, Light)</option>
+                      <option value="discord">Discord (Signature Blurple, Dark)</option>
+                      <option value="slack">Slack (Enterprise Collaboration)</option>
+                      <option value="raycast">Raycast (macOS Launcher Glassmorphism)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>Warna Utama (Primary)</label>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <input 
+                      type="color" 
+                      value={primaryColor} 
+                      onChange={(e) => setPrimaryColor(e.target.value)} 
+                      style={{ width: '42px', height: '42px', padding: '0', border: '1px solid var(--border-color)', borderRadius: '6px', cursor: 'pointer', background: 'transparent' }}
+                    />
+                    <input 
+                      type="text" 
+                      className="input-field" 
+                      value={primaryColor} 
+                      onChange={(e) => setPrimaryColor(e.target.value)} 
+                      style={{ fontFamily: 'monospace', fontSize: '0.85rem', padding: '0.5rem', flex: 1 }}
+                    />
                   </div>
                 </div>
 
@@ -967,14 +1636,14 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
                 ) : (
                   <div>
                     {/* Sub-tab selection */}
-                    <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.25rem', overflowX: 'auto', width: '100%', whiteSpace: 'nowrap', WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none' }}>
                       <button 
                         onClick={() => setActiveSubTab('design')}
                         className="btn"
                         style={{
                           background: activeSubTab === 'design' ? 'var(--primary-light)' : 'transparent',
                           color: activeSubTab === 'design' ? 'var(--primary)' : 'var(--text-secondary)',
-                          fontSize: '0.85rem', padding: '0.4rem 0.8rem', borderRadius: '6px'
+                          fontSize: '0.85rem', padding: '0.4rem 0.8rem', borderRadius: '6px', flexShrink: 0
                         }}
                       >
                         <FileText size={14} /> design.md
@@ -985,7 +1654,7 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
                         style={{
                           background: activeSubTab === 'style' ? 'var(--primary-light)' : 'transparent',
                           color: activeSubTab === 'style' ? 'var(--primary)' : 'var(--text-secondary)',
-                          fontSize: '0.85rem', padding: '0.4rem 0.8rem', borderRadius: '6px'
+                          fontSize: '0.85rem', padding: '0.4rem 0.8rem', borderRadius: '6px', flexShrink: 0
                         }}
                       >
                         <Code size={14} /> style.md
@@ -996,7 +1665,7 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
                         style={{
                           background: activeSubTab === 'prompt' ? 'var(--primary-light)' : 'transparent',
                           color: activeSubTab === 'prompt' ? 'var(--primary)' : 'var(--text-secondary)',
-                          fontSize: '0.85rem', padding: '0.4rem 0.8rem', borderRadius: '6px'
+                          fontSize: '0.85rem', padding: '0.4rem 0.8rem', borderRadius: '6px', flexShrink: 0
                         }}
                       >
                         <Terminal size={14} /> prompt.md
@@ -1071,7 +1740,10 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
                   </div>
                   
                   <span style={mockup.title}>{theme || 'Nama Proyek'}</span>
-                  <span style={mockup.subtitle}>Estetika: {aesthetic.toUpperCase()}</span>
+                  <span style={mockup.subtitle}>
+                    Estetika: {aesthetic.toUpperCase()} 
+                    {designSystem !== 'none' && ` | Ref: ${designSystem.toUpperCase()}`}
+                  </span>
                   
                   <div style={mockup.stat}>
                     {aesthetic === 'cyberpunk' ? (

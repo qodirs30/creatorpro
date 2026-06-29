@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import useAppStore from '../store/useAppStore';
 import { generateContent } from '../utils/ai';
-import { Copy, Save, Sparkles, Download, FileText } from 'lucide-react';
+import { Copy, Sparkles, Download, FileText } from 'lucide-react';
 import jsPDF from 'jspdf';
 
 export default function ContentScripting() {

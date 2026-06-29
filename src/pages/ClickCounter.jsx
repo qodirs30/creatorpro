@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import useAppStore from '../store/useAppStore';
 import { Plus, Minus, RotateCcw, Edit2, Trash2, Target, Hash, X, Check, Zap } from 'lucide-react';
 

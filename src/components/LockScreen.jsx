@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import useAppStore from '../store/useAppStore';
 import { Fingerprint, Lock, ShieldAlert } from 'lucide-react';
 
@@ -65,7 +65,7 @@ export default function LockScreen({ children }) {
           </div>
         </div>
         
-        <h2 style={{ marginBottom: '0.5rem' }}>ProCreator Terkunci</h2>
+        <h2 style={{ marginBottom: '0.5rem' }}>qodirsAi Terkunci</h2>
         <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
           Verifikasi identitas Anda untuk mengakses ruang kerja. (Absensi Harian)
         </p>

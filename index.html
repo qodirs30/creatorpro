@@ -3,8 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    <title>ProCreator Studio</title>
+    <title>qodirsAi Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet">
+    <script type="text/javascript">
+      window.addEventListener('error', function(event) {
+        var errorDiv = document.createElement('div');
+        errorDiv.style.position = 'fixed';
+        errorDiv.style.inset = '0';
+        errorDiv.style.backgroundColor = '#fef2f2';
+        errorDiv.style.color = '#dc2626';
+        errorDiv.style.padding = '2rem';
+        errorDiv.style.zIndex = '999999';
+        errorDiv.style.fontFamily = 'monospace';
+        errorDiv.style.overflow = 'auto';
+        errorDiv.innerHTML = '<h2 style="margin-top:0;">Runtime Error Terdeteksi:</h2>' +
+          '<p><strong>Pesan:</strong> ' + event.message + '</p>' +
+          '<p><strong>Berkas:</strong> ' + event.filename + ':' + event.lineno + ':' + event.colno + '</p>' +
+          '<p><strong>Stack Trace:</strong></p><pre style="background:#f1f5f9; padding:1rem; border-radius:8px; overflow-x:auto;">' + (event.error ? event.error.stack : 'Tidak ada stack trace') + '</pre>' +
+          '<p style="margin-top: 1rem; color: #475569;">Silakan salin teks di atas atau screenshot halaman ini agar saya bisa memperbaikinya.</p>';
+        document.body.appendChild(errorDiv);
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

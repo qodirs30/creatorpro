@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import useAppStore from '../store/useAppStore';
-import { Key, Save, Shield, ExternalLink, Cpu, Image as ImageIcon, Video, Trash2, RefreshCw, Plus, Eye, EyeOff } from 'lucide-react';
+import { Key, Save, Shield, ExternalLink, Cpu, Trash2, RefreshCw, Plus, Eye, EyeOff, Download, Upload, Database, LogOut } from 'lucide-react';
+import { 
+  logoutFirebase, 
+  updateUserProfile, 
+  sendPasswordReset 
+} from '../utils/firebase';
 
 export default function Settings() {
   const { 
@@ -12,7 +17,8 @@ export default function Settings() {
     aiProvider, setAiProvider, 
     aiModel, setAiModel,
     enablePinLock, setEnablePinLock,
-    pin, setPin
+    pin, setPin,
+    firebaseUser, setFirebaseUser,
   } = useAppStore();
 
   const splitKeys = (keyStr) => {
@@ -34,8 +40,104 @@ export default function Settings() {
   const [localPin, setLocalPin] = useState(pin);
   const [saved, setSaved] = useState(false);
 
+  // State Profil Firebase
+  const [profileName, setProfileName] = useState(firebaseUser?.displayName || '');
+  const [profilePhoto, setProfilePhoto] = useState(firebaseUser?.photoURL || '');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState(null);
+
+  const handleUpdateProfile = async () => {
+    if (!profileName.trim()) {
+      setProfileMessage({ type: 'error', text: 'Nama tampilan tidak boleh kosong.' });
+      return;
+    }
+    setProfileSaving(true);
+    setProfileMessage(null);
+    try {
+      const updatedUser = await updateUserProfile(profileName, profilePhoto);
+      setFirebaseUser({
+        uid: updatedUser.uid,
+        email: updatedUser.email,
+        displayName: updatedUser.displayName,
+        photoURL: updatedUser.photoURL
+      });
+      setProfileMessage({ type: 'success', text: 'Profil berhasil diperbarui!' });
+    } catch (err) {
+      console.error(err);
+      setProfileMessage({ type: 'error', text: err.message || 'Gagal memperbarui profil.' });
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    setProfileSaving(true);
+    setProfileMessage(null);
+    try {
+      await sendPasswordReset(firebaseUser.email);
+      setProfileMessage({ type: 'success', text: 'Instruksi reset kata sandi telah dikirim ke email Anda!' });
+    } catch (err) {
+      console.error(err);
+      setProfileMessage({ type: 'error', text: err.message || 'Gagal mengirim email reset kata sandi.' });
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (window.confirm("Apakah Anda yakin ingin keluar dari akun qodirsAi?")) {
+      try {
+        await logoutFirebase();
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  };
+
   const [showKeys, setShowKeys] = useState({});
   const [keyStatuses, setKeyStatuses] = useState({});
+
+  // Handler Ekspor & Impor Cadangan Data
+  const handleExportData = () => {
+    const allData = localStorage.getItem('qodirsai-storage-v1');
+    if (!allData) {
+      alert("Tidak ada data untuk diekspor.");
+      return;
+    }
+    const blob = new Blob([allData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `qodirsai-journal-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target.result);
+        if (!json || typeof json !== 'object') {
+          throw new Error("Format JSON tidak valid.");
+        }
+        
+        // Simpan langsung ke local storage
+        localStorage.setItem('qodirsai-storage-v1', event.target.result);
+        alert("Data berhasil diimpor! Aplikasi akan memuat ulang halaman.");
+        window.location.reload();
+      } catch (error) {
+        alert("Gagal mengimpor berkas: Pastikan berkas berupa JSON backup yang valid.");
+        console.error(error);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const textProviders = {
     gemini: {
@@ -213,6 +315,8 @@ export default function Settings() {
     setAiModel(localModel);
     setEnablePinLock(localEnablePinLock);
     setPin(localPin);
+
+
     
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -242,6 +346,8 @@ export default function Settings() {
                   <div style={{ position: 'relative', flex: 1 }}>
                     <input 
                       type={isVisible ? 'text' : 'password'}
+                      name="apiKey"
+                      autocomplete="off"
                       className="input-field" 
                       placeholder={`Masukkan API Key #${idx + 1}`} 
                       value={key} 
@@ -270,6 +376,7 @@ export default function Settings() {
                         justifyContent: 'center'
                       }}
                       title={isVisible ? "Sembunyikan" : "Tampilkan"}
+                      aria-label={isVisible ? "Sembunyikan API Key" : "Tampilkan API Key"}
                     >
                       {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -283,6 +390,7 @@ export default function Settings() {
                     style={{ padding: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, height: '42px', width: '42px' }}
                     disabled={statusInfo?.status === 'checking'}
                     title="Cek Koneksi"
+                    aria-label="Cek koneksi API Key"
                   >
                     <RefreshCw size={16} className={statusInfo?.status === 'checking' ? 'animate-spin' : ''} />
                   </button>
@@ -295,6 +403,7 @@ export default function Settings() {
                     style={{ padding: '0.75rem', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, height: '42px', width: '42px' }}
                     disabled={keysList.length <= 1 && !key}
                     title="Hapus Key"
+                    aria-label="Hapus API Key"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -354,11 +463,162 @@ export default function Settings() {
 
   return (
     <div style={{ maxWidth: '850px', margin: '0 auto', paddingBottom: '3rem' }}>
-      <h1 className="text-gradient" style={{ marginBottom: '2rem', fontSize: '2.5rem' }}>qodirs pro creator — API & Konfigurasi</h1>
+      <h1 className="text-gradient" style={{ marginBottom: '2rem', fontSize: '2.5rem' }}>Card Cloud Journal — API & Konfigurasi</h1>
       
       <p style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>
         Pusat kontrol multi-model. Simpan semua kunci rahasia Anda di sini secara aman (Offline-First). Aplikasi akan cerdas memilih kunci yang tepat sesuai alat yang Anda gunakan.
       </p>
+
+      {/* ===================== KARTU PROFIL PENGGUNA ===================== */}
+      {firebaseUser && (
+        <div className="card" style={{ marginBottom: '2rem', borderTop: '4px solid var(--primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <div style={{
+              width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--primary-light)'
+            }}>
+              <img 
+                src={profilePhoto || 'https://www.gravatar.com/avatar?d=mp'} 
+                alt="Profile Preview" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => { e.target.src = 'https://www.gravatar.com/avatar?d=mp'; }}
+              />
+            </div>
+            <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Profil Pengguna qodirsAi</h2>
+          </div>
+          
+          {profileMessage && (
+            <div style={{
+              background: profileMessage.type === 'error' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+              border: profileMessage.type === 'error' ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(16, 185, 129, 0.3)',
+              padding: '0.75rem 1rem',
+              borderRadius: '12px',
+              color: profileMessage.type === 'error' ? '#fca5a5' : '#a7f3d0',
+              fontSize: '0.875rem',
+              marginBottom: '1.5rem',
+              textAlign: 'left'
+            }}>
+              {profileMessage.text}
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>Nama Tampilan</label>
+              <input 
+                type="text" 
+                name="displayName"
+                autocomplete="name"
+                className="input-field" 
+                value={profileName} 
+                onChange={(e) => setProfileName(e.target.value)} 
+                placeholder="Nama Anda"
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>Foto Profil</label>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input 
+                  type="text" 
+                  name="profilePhotoUrl"
+                  className="input-field" 
+                  value={profilePhoto.startsWith('data:') ? 'Foto dari Galeri (Base64)' : profilePhoto} 
+                  onChange={(e) => setProfilePhoto(e.target.value)} 
+                  placeholder="https://link-foto-anda.jpg atau pilih berkas..."
+                  style={{ flex: 1 }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => document.getElementById('profile-file-input').click()}
+                  style={{ whiteSpace: 'nowrap', padding: '0 1rem', fontSize: '0.85rem' }}
+                >
+                  Pilih Foto
+                </button>
+                <input 
+                  type="file" 
+                  id="profile-file-input" 
+                  accept="image/*" 
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    if (!file.type.startsWith('image/')) {
+                      alert('Berkas harus berupa gambar.');
+                      return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const img = new Image();
+                      img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 200;
+                        const MAX_HEIGHT = 200;
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > height) {
+                          if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                          }
+                        } else {
+                          if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                          }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        const dataUrl = canvas.toDataURL('image/webp', 0.8) || canvas.toDataURL('image/jpeg', 0.8);
+                        setProfilePhoto(dataUrl);
+                      };
+                      img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                  }} 
+                  style={{ display: 'none' }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+            Email terdaftar: <strong>{firebaseUser.email}</strong>
+          </div>
+
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <button 
+              type="button" 
+              className="btn btn-primary" 
+              onClick={handleUpdateProfile}
+              disabled={profileSaving}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, cursor: 'pointer' }}
+            >
+              Simpan Profil
+            </button>
+            
+            <button 
+              type="button" 
+              className="btn btn-secondary" 
+              onClick={handleResetPassword}
+              disabled={profileSaving}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, cursor: 'pointer' }}
+            >
+              Kirim Link Reset Kata Sandi
+            </button>
+
+            <button 
+              type="button" 
+              className="btn btn-secondary" 
+              onClick={handleLogout}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, color: 'var(--danger)', borderColor: 'var(--danger)', cursor: 'pointer' }}
+            >
+              <LogOut size={16} /> Keluar Akun
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ===================== KARTU DEFAULT TEXT PROVIDER ===================== */}
       <div className="card" style={{ marginBottom: '2rem', borderTop: '4px solid var(--accent)' }}>
@@ -401,6 +661,43 @@ export default function Settings() {
           </select>
         </div>
       </div>
+      {/* ===================== KARTU EKSPOR & IMPOR DATA ===================== */}
+      <div className="card" style={{ marginBottom: '2rem', borderTop: '4px solid var(--success)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.5rem' }}>
+          <Database size={24} color="var(--success)" />
+          <h2 style={{ fontSize: '1.25rem', margin: 0 }}>Ekspor & Impor Cadangan Data</h2>
+        </div>
+        
+        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+          Simpan seluruh data aplikasi Anda (kartu jurnal, kebiasaan, chat companion, penghitung, naskah, dan pengaturan) ke dalam file JSON lokal untuk dicadangkan atau dipindahkan ke perangkat lain.
+        </p>
+
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            onClick={handleExportData}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}
+          >
+            <Download size={16} /> Ekspor Data ke JSON
+          </button>
+          
+          <label 
+            className="btn btn-secondary" 
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0 }}
+          >
+            <Upload size={16} /> Impor Data dari JSON
+            <input 
+              type="file" 
+              accept=".json" 
+              onChange={handleImportData} 
+              style={{ display: 'none' }} 
+            />
+          </label>
+        </div>
+      </div>
+
+
 
       {/* ===================== KARTU KEAMANAN & PIN LOCK ===================== */}
       <div className="card" style={{ marginBottom: '2rem', borderTop: '4px solid var(--danger)' }}>
@@ -429,6 +726,8 @@ export default function Settings() {
               <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>Atur 4 Digit PIN Baru</label>
               <input 
                 type="password" 
+                name="pinCode"
+                autocomplete="off"
                 maxLength={4}
                 className="input-field" 
                 placeholder="PIN Baru" 
@@ -491,6 +790,8 @@ export default function Settings() {
           </div>
           <input 
             type="password" 
+            name="klingAccessKey"
+            autocomplete="off"
             className="input-field" 
             placeholder="Access Key (ak-...)" 
             value={localKlingAccess} 
@@ -510,6 +811,8 @@ export default function Settings() {
           </div>
           <input 
             type="password" 
+            name="klingSecretKey"
+            autocomplete="off"
             className="input-field" 
             placeholder="Secret Key (sk-...)" 
             value={localKlingSecret} 

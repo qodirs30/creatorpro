@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Play, Square, Timer } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 
@@ -17,7 +17,8 @@ export default function DailyPlanner() {
       interval = setInterval(() => {
         setTimeLeft(time => time - 1);
       }, 1000);
-    } else if (timeLeft === 0) {
+    } else if (timeLeft === 0 && isActive) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsActive(false);
       alert('Sesi Pomodoro selesai! Istirahatlah 5 menit.');
     }

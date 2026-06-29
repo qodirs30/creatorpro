@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import useAppStore from '../store/useAppStore';
 import { generateContent, analyzeImageWithGemini } from '../utils/ai';
 import { Sparkles, Mic, MicOff, Copy, CheckCircle2, Wand2, Code, Image as ImageIcon, Film, Edit3, RefreshCw, AlertTriangle, Trash2, Globe, Camera, Upload, X } from 'lucide-react';
@@ -81,7 +81,9 @@ export default function MegaPrompt() {
 
   // Voice recognition state
   const [isListening, setIsListening] = useState(false);
-  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [voiceSupported] = useState(() => 
+    typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition)
+  );
   const [interimText, setInterimText] = useState('');
   const recognitionRef = useRef(null);
   const finalTranscriptRef = useRef('');
@@ -90,7 +92,6 @@ export default function MegaPrompt() {
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
-      setVoiceSupported(true);
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -134,7 +135,7 @@ export default function MegaPrompt() {
     
     return () => {
       if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
+        try { recognitionRef.current.stop(); } catch { /* ignore stop error */ }
       }
     };
   }, []);
@@ -142,10 +143,11 @@ export default function MegaPrompt() {
   // Reset aspect ratio when mode changes
   useEffect(() => {
     const ratios = ASPECT_RATIOS[activeMode] || [];
-    if (ratios.length > 0) {
+    if (ratios.length > 0 && aspectRatio !== ratios[0]) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAspectRatio(ratios[0]);
     }
-  }, [activeMode]);
+  }, [activeMode, aspectRatio]);
 
   const toggleVoiceInput = () => {
     if (!voiceSupported) {

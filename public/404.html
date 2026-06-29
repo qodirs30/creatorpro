@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>qodirsAi Studio</title>
+    <script type="text/javascript">
+      // Simpan path tujuan awal di sessionStorage sebelum dialihkan
+      var path = window.location.pathname;
+      if (path && path !== '/' && path !== '/index.html') {
+        sessionStorage.setItem('redirect_path', path + window.location.search + window.location.hash);
+      }
+      // Arahkan kembali pengguna ke halaman utama secara instan
+      window.location.replace(window.location.origin + '/');
+    </script>
+  </head>
+  <body>
+    Mengalihkan ke halaman utama qodirsAi...
+  </body>
+</html>

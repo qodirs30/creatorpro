@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import useAppStore from '../store/useAppStore';
 import { Plus, X, Edit2, Trash2, Settings, ChevronRight, ChevronLeft, Calendar, Tag, FileText } from 'lucide-react';
-
-const COLOR_PRESETS = ['#f59e0b', '#6366f1', '#8b5cf6', '#10b981', '#ec4899', '#06b6d4', '#ef4444', '#f97316', '#14b8a6'];
 const EMOJI_PRESETS = ['💡', '✍️', '📅', '✅', '🎬', '🎨', '📸', '🎯', '🚀', '🔥', '⭐', '📝', '💭', '📣', '🎙️', '⏸️'];
 
 export default function SocialPlanner() {

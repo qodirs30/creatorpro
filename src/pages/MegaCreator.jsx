@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
 import { generateContent } from '../utils/ai';
 import { 
   Video, Sparkles, Clipboard, Download, Play, RefreshCw, 
   ShieldAlert, CheckCircle2, FileText, Globe, Info, Sliders, Eye,
-  Camera, CameraOff, Square, Settings, Volume2, Trash2, SlidersHorizontal
+  Camera, CameraOff, Square, Trash2, SlidersHorizontal
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 
@@ -54,7 +54,7 @@ export default function MegaCreator() {
   const [teleFontSize, setTeleFontSize] = useState(26); // in px (16 - 48)
   const [teleWidth, setTeleWidth] = useState(600); // in px (300 - 900)
   const [teleColor, setTeleColor] = useState('#22c55e'); // Green neon
-  const [teleLineHeight, setTeleLineHeight] = useState(1.8);
+  const [teleLineHeight] = useState(1.8);
   const [showGuide, setShowGuide] = useState(true);
   const [teleFlip, setTeleFlip] = useState(false);
   const [teleBgOpacity, setTeleBgOpacity] = useState(0.7); // 0.1 - 0.9
@@ -93,6 +93,7 @@ export default function MegaCreator() {
     return () => {
       stopCamera();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode]);
 
   // Handle selected camera device or resolution change
@@ -100,6 +101,7 @@ export default function MegaCreator() {
     if (cameraActive && viewMode === 'teleprompter') {
       startCamera();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDevice, cameraResolution]);
 
   // Handle recording timer ticks
@@ -120,12 +122,13 @@ export default function MegaCreator() {
 
   // Compile chunks into a downloadable file URL after recording stops
   useEffect(() => {
-    if (!isRecording && recordedChunks.length > 0) {
+    if (!isRecording && recordedChunks.length > 0 && !recordedUrl) {
       const blob = new Blob(recordedChunks, { type: 'video/webm' });
       const url = URL.createObjectURL(blob);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRecordedUrl(url);
     }
-  }, [recordedChunks, isRecording]);
+  }, [recordedChunks, isRecording, recordedUrl]);
 
   // Synchronize webcam stream to video element when it mounts
   useEffect(() => {
@@ -134,7 +137,7 @@ export default function MegaCreator() {
     }
   }, [cameraActive, selectedDevice]);
 
-  const startCamera = async () => {
+  async function startCamera() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
     }
@@ -172,9 +175,9 @@ export default function MegaCreator() {
       alert('Gagal mengakses kamera/mikrofon: ' + err.message);
       setCameraActive(false);
     }
-  };
+  }
 
-  const stopCamera = () => {
+  function stopCamera() {
     if (isRecording) {
       handleStopRecording();
     }
@@ -186,9 +189,9 @@ export default function MegaCreator() {
       videoPreviewRef.current.srcObject = null;
     }
     setCameraActive(false);
-  };
+  }
 
-  const handleStartRecording = () => {
+  function handleStartRecording() {
     if (!streamRef.current) {
       alert('Kamera belum aktif. Aktifkan kamera terlebih dahulu.');
       return;
@@ -198,7 +201,6 @@ export default function MegaCreator() {
     setRecordingTime(0);
 
     let recorder;
-    let selectedMimeType = '';
     const candidates = [
       'video/webm;codecs=vp8',
       'video/webm;codecs=h264',
@@ -212,10 +214,9 @@ export default function MegaCreator() {
       if (MediaRecorder.isTypeSupported(mime)) {
         try {
           recorder = new MediaRecorder(streamRef.current, { mimeType: mime });
-          selectedMimeType = mime;
           console.log('Menggunakan codec:', mime);
           break;
-        } catch (err) {
+        } catch {
           // Lanjutkan ke kandidat berikutnya
         }
       }
@@ -241,15 +242,15 @@ export default function MegaCreator() {
     }
     scrollPosRef.current = 0;
     setScrollActive(true);
-  };
+  }
 
-  const handleStopRecording = () => {
+  function handleStopRecording() {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
     setIsRecording(false);
     setScrollActive(false);
-  };
+  }
 
   const handleDownloadVideo = () => {
     if (!recordedUrl) return;
@@ -409,7 +410,7 @@ export default function MegaCreator() {
       const context = `[Hasil Scraping Link]\nJudul Video/Halaman: ${title}\nRingkasan/Deskripsi: ${description}`;
       setScrapedContext(context);
       setIdea(`Buat konten terinspirasi dari video ini: "${title}". Deskripsi video: "${description}"`);
-    } catch (err) {
+    } catch {
       setScrapeError('Gagal mengekstrak link secara otomatis (CORS/WAF block). Silakan ketik langsung topik video tersebut di kolom Ide.');
     } finally {
       setIsScraping(false);
@@ -464,7 +465,7 @@ export default function MegaCreator() {
       long: 'Long-form (3-10 menit)'
     };
 
-    let systemPrompt = '';
+    let systemPrompt;
     
     if (scriptOnly) {
       systemPrompt = `Kamu adalah seorang "Mega Creator" dan Penulis Naskah Konten kelas dunia. Tugasmu adalah membuat naskah video/konten yang viral-friendly dan siap dibaca untuk dubbing/voiceover berdasarkan ide pengguna.
@@ -735,7 +736,7 @@ Gunakan Bahasa Indonesia yang kasual, kekinian, dan mudah dicerna (sesuai gaya k
             </h3>
             
             {scriptText !== null && (
-              <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <div style={{ 
                   display: 'flex', background: 'var(--bg-main)', padding: '0.2rem', 
                   borderRadius: '6px', border: '1px solid var(--border-color)', marginRight: '0.25rem' 

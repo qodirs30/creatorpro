@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import useAppStore from '../store/useAppStore';
 import { Activity, Calendar, CalendarDays, CheckCircle, History, Wand2, Edit3, Target, LayoutDashboard, Trash2, Copy, ChevronDown, ChevronUp, Search } from 'lucide-react';
 
@@ -26,6 +26,7 @@ function HistoryItem({ item, onDelete }) {
   };
 
   const timeAgo = (dateStr) => {
+    // eslint-disable-next-line react-hooks/purity
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 1) return 'baru saja';
@@ -44,6 +45,7 @@ function HistoryItem({ item, onDelete }) {
       overflow: 'hidden',
       transition: 'all 0.2s',
       background: 'var(--bg-card)',
+      flexShrink: 0,
     }}>
       <div
         style={{
@@ -185,16 +187,16 @@ export default function Dashboard() {
 
       {/* Peringatan Kewajiban */}
       {uncompletedMandatory > 0 ? (
-        <div className="card" style={{ marginBottom: '2rem', backgroundColor: '#fef2f2', borderLeft: '4px solid var(--danger)' }}>
+        <div className="card card-danger" style={{ marginBottom: '2rem' }}>
           <h3 style={{ color: 'var(--danger)', marginBottom: '0.5rem' }}>Awas! Ada Kewajiban yang Belum Selesai!</h3>
-          <p style={{ margin: 0, color: '#991b1b' }}>
+          <p style={{ margin: 0, color: 'var(--text-primary)' }}>
             Anda memiliki {uncompletedMandatory} kewajiban wajib yang harus diselesaikan hari ini. Segera buka halaman Pelacak Kebiasaan!
           </p>
         </div>
       ) : mandatoryHabits.length > 0 && (
-        <div className="card" style={{ marginBottom: '2rem', backgroundColor: '#ecfdf5', borderLeft: '4px solid var(--success)' }}>
+        <div className="card card-success" style={{ marginBottom: '2rem' }}>
           <h3 style={{ color: 'var(--success)', marginBottom: '0.5rem' }}>Semua Kewajiban Selesai!</h3>
-          <p style={{ margin: 0, color: '#065f46' }}>
+          <p style={{ margin: 0, color: 'var(--text-primary)' }}>
             Kerja bagus! Anda telah menyelesaikan semua kewajiban wajib hari ini. Pertahankan!
           </p>
         </div>

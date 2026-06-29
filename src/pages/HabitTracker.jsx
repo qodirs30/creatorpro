@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import useAppStore from '../store/useAppStore';
 import { CheckCircle2, Circle, AlertTriangle, Target, BellRing } from 'lucide-react';
 
@@ -6,14 +6,15 @@ export default function HabitTracker() {
   const { habits, addHabit, updateHabit, deleteHabit, logActivity, removeActivityLog } = useAppStore();
   const [newHabit, setNewHabit] = useState('');
   const [isMandatory, setIsMandatory] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState('default');
+  const [notificationPermission, setNotificationPermission] = useState(() => 
+    (typeof window !== 'undefined' && 'Notification' in window) ? Notification.permission : 'default'
+  );
 
   useEffect(() => {
-    if ('Notification' in window) {
-      setNotificationPermission(Notification.permission);
-      if (Notification.permission === 'default') {
-        Notification.requestPermission().then(setNotificationPermission);
-      }
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().then((perm) => {
+        setNotificationPermission(perm);
+      });
     }
   }, []);
 
@@ -79,10 +80,10 @@ export default function HabitTracker() {
       
       {/* Peringatan Notifikasi */}
       {notificationPermission !== 'granted' && (
-        <div className="card" style={{ marginBottom: '1.5rem', backgroundColor: '#fffbeb', borderLeft: '4px solid var(--warning)' }}>
+        <div className="card card-warning" style={{ marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <BellRing size={24} color="var(--warning)" />
-            <p style={{ margin: 0, color: '#92400e' }}>
+            <p style={{ margin: 0, color: 'var(--text-primary)' }}>
               Untuk mengaktifkan fitur "Spam Anti-Malas", izinkan browser menampilkan notifikasi.
             </p>
           </div>
@@ -90,7 +91,7 @@ export default function HabitTracker() {
       )}
 
       {/* Kewajiban (Mandatory) */}
-      <div className="card" style={{ marginBottom: '2rem', border: '2px solid var(--danger)' }}>
+      <div className="card card-danger" style={{ marginBottom: '2rem' }}>
         <h2 style={{ fontSize: '1.25rem', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
           <AlertTriangle size={20} />
           Kewajiban Wajib (Anti-Malas)
