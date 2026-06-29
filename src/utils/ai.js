@@ -284,7 +284,7 @@ export async function generateCompanionChat(apiKey, companion, chatHistory, card
     : '';
 
   const appKnowledge = `Informasi Aplikasi (Website qodirsAi):
-Aplikasi ini adalah qodirsAi (qRSTudio.my.id), sebuah dashboard produktivitas premium all-in-one yang canggih dengan Firebase Cloud Auto-Sync. Fitur-fiturnya meliputi:
+Aplikasi ini adalah qodirsAi (qodirsganteng.my.id), sebuah dashboard produktivitas premium all-in-one yang canggih dengan Firebase Cloud Auto-Sync. Fitur-fiturnya meliputi:
 - **Beranda (Dashboard)**: Ringkasan harian, kutipan motivasi, tracker kebiasaan, grafik keuangan, tugas mendesak.
 - **Card Cloud Journal (Memex Journal)**: Mencatat jurnal/fragmen harian. Bisa melampirkan berkas (PDF, Gambar, TXT) untuk diekstrak otomatis oleh AI menjadi kartu (Tugas, Transaksi Keuangan, Catatan, Kutipan, Kontak). Ada tab "Pengetahuan Suki" untuk mengunggah katalog laptop/toko Anda agar kamu (Suki) mengetahuinya.
 - **Pelacak Kebiasaan (Habit Tracker)**: Checklist kebiasaan harian, streaks beruntun, grafik keberhasilan, dan gamifikasi koin/XP.
