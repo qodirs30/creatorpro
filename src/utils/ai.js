@@ -225,10 +225,10 @@ Ketentuan Ekstraksi:
 3. Buat array "tags" berisi kata kunci penting (1-3 kata kunci, lowercase, tanpa spasi panjang).
 4. Buat objek "data" berisi detail spesifik tergantung tipenya:
    - Jika "task": { "todo": "deskripsi tugas", "dueDate": "tanggal tenggat format YYYY-MM-DD (jika ada, jika tidak kosongkan)" }
-   - Jika "transaction": { "amount": angka nominal uang (wajib integer angka murni tanpa titik/koma/simbol), "category": "makanan/transportasi/hosting/kopi/lainnya", "type": "expense" atau "income" }
-   - Jika "quote": { "quote": "teks kutipan", "author": "nama penulis kutipan (jika ada, jika tidak tulis 'Anonim')" }
-   - Jika "contact": { "name": "nama orang", "relationship": "rekan kerja/teman/keluarga/klien", "context": "keterangan pertemuan/catatan" }
-   - Jika "note": { "summary": "ringkasan isi catatan dalam 1-2 kalimat" }
+    - Jika "transaction": { "amount": angka nominal uang (wajib integer angka murni tanpa titik/koma/simbol. GUNA ATURAN RIBUAN: Jika pengguna menginput nominal angka singkat/kecil tanpa ribuan, contoh: "15", "50", "150", konversikan otomatis ke ribuan dengan mengalikan 1000 sehingga menjadi 15000, 50000, 150000. Kecuali jika nominal sudah ditulis lengkap seperti 15000), "category": "makanan/transportasi/hosting/kopi/lainnya", "type": "expense" atau "income" }
+    - Jika "quote": { "quote": "teks kutipan", "author": "nama penulis kutipan (jika ada, jika tidak tulis 'Anonim')" }
+    - Jika "contact": { "name": "nama orang", "relationship": "rekan kerja/teman/keluarga/klien", "context": "keterangan pertemuan/catatan" }
+    - Jika "note": { "summary": "ringkasan isi catatan dalam 1-2 kalimat" }
 5. Buat properti "companionComment". Ini adalah komentar spontan yang ditulis dari perspektif karakter AI Companion bernama Suki. Suki adalah teman dekat yang santai, menggunakan gaya bicara gaul santai/lucu kekinian Indonesia (gue, lo, dll), agak usil/humoris, menyemangati namun bisa bercanda meledek jika kegiatannya aneh/berlebihan. Sesuaikan komentar dengan isi teks pengguna.
 
 Harus mengembalikan output dalam format JSON MURNI yang valid tanpa teks pembuka atau penutup lainnya. Jangan gunakan backticks markdown di luar json. Format JSON yang dikembalikan harus berupa:
@@ -309,7 +309,26 @@ ${knowledgeSection}Berikut adalah memori aktivitas/jurnal pengguna hari ini yang
 ${cardsSummary}
 
 Instruksi Tambahan:
-Jawablah pesan pengguna menggunakan gaya kepribadianmu di atas. Tulis jawaban yang singkat (1-3 kalimat) agar terasa natural seperti bertukar pesan instan/chatting. Jangan terlalu formal! Gunakan gaya bahasa kasual.`;
+Jawablah pesan pengguna menggunakan gaya kepribadianmu di atas. Tulis jawaban yang singkat (1-3 kalimat) agar terasa natural seperti bertukar pesan instan/chatting. Jangan terlalu formal! Gunakan gaya bahasa kasual.
+
+Kemampuan Mencatat (WAJIB):
+Jika dalam pesan pengguna terdeteksi permintaan atau pernyataan berniat mencatat sesuatu (seperti mencatat pengeluaran/pemasukan uang, tugas baru, jadwal, kutipan, kontak orang baru, atau catatan ide), maka selain membalas chat secara kasual, kamu WAJIB menyertakan blok XML/JSON berikut di paling bawah jawabanmu untuk dimasukkan ke database:
+<record_card>
+{
+  "type": "task | transaction | quote | contact | note",
+  "title": "Judul singkat kartu representatif (maksimal 5 kata)",
+  "tags": ["tag1", "tag2"],
+  "data": { 
+    // Jika "task": { "todo": "deskripsi tugas", "dueDate": "tanggal YYYY-MM-DD (jika ada)" }
+    // Jika "transaction": { "amount": integer nominal uang murni (Gunakan aturan ribuan: jika ditulis angka singkat seperti 15, 50, anggap itu dalam ribuan (dikalikan 1000) sehingga menjadi 15000, 50000. Kecuali ditulis lengkap), "category": "makanan/transportasi/kopi/lainnya", "type": "expense" atau "income" }
+    // Jika "quote": { "quote": "teks kutipan", "author": "penulis (default: Anonim)" }
+    // Jika "contact": { "name": "nama orang", "relationship": "rekan/teman/keluarga/klien", "context": "catatan pertemuan" }
+    // Jika "note": { "summary": "ringkasan isi catatan" }
+  }
+}
+</record_card>
+
+Jika pengguna tidak berniat mencatat apa-apa, cukup balas chat biasa tanpa tag <record_card>.`;
 
   // Batasi riwayat chat hanya 8 pesan terakhir agar prompt tidak terlalu panjang dan AI merespon lebih cepat
   const recentHistory = chatHistory.slice(-8);
@@ -382,7 +401,7 @@ Ketentuan Ekstraksi:
 3. Buat array "tags" berisi kata kunci penting (1-3 kata kunci, lowercase, tanpa spasi panjang).
 4. Buat objek "data" berisi detail spesifik tergantung tipenya:
    - Jika "task": { "todo": "deskripsi tugas", "dueDate": "tanggal tenggat format YYYY-MM-DD (jika ada, jika tidak kosongkan)" }
-   - Jika "transaction": { "amount": angka nominal uang (wajib integer angka murni tanpa titik/koma/simbol), "category": "makanan/transportasi/hosting/kopi/lainnya", "type": "expense" atau "income" }
+   - Jika "transaction": { "amount": angka nominal uang (wajib integer angka murni tanpa titik/koma/simbol. GUNA ATURAN RIBUAN: Jika pengguna menginput nominal angka singkat/kecil tanpa ribuan, contoh: "15", "50", "150", konversikan otomatis ke ribuan dengan mengalikan 1000 sehingga menjadi 15000, 50000, 150000. Kecuali jika nominal sudah ditulis lengkap seperti 15000), "category": "makanan/transportasi/hosting/kopi/lainnya", "type": "expense" atau "income" }
    - Jika "quote": { "quote": "teks kutipan", "author": "nama penulis kutipan (jika ada, jika tidak tulis 'Anonim')" }
    - Jika "contact": { "name": "nama orang", "relationship": "rekan kerja/teman/keluarga/klien", "context": "keterangan pertemuan/catatan" }
    - Jika "note": { "summary": "ringkasan isi atau deskripsi dari dokumen/gambar tersebut dalam 1-2 kalimat" }

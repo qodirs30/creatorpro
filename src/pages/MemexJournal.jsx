@@ -735,7 +735,27 @@ export default function MemexJournal() {
         sukiKnowledge?.content || ''
       );
 
-      addMemexChat({ role: 'assistant', content: reply.trim() });
+      let cleanReply = reply.trim();
+      const recordMatch = cleanReply.match(/<record_card>([\s\S]*?)<\/record_card>/);
+      
+      if (recordMatch) {
+        const jsonStr = recordMatch[1].trim();
+        try {
+          const cardObj = JSON.parse(jsonStr);
+          addMemexCard({
+            type: cardObj.type || 'note',
+            title: cardObj.title || 'Catatan Chat',
+            tags: cardObj.tags || ['chat'],
+            data: cardObj.data || { summary: userMsg },
+            companionComment: cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim()
+          });
+        } catch (parseErr) {
+          console.error("Gagal parse record_card dari chat Suki di Memex:", parseErr);
+        }
+        cleanReply = cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim();
+      }
+
+      addMemexChat({ role: 'assistant', content: cleanReply });
     } catch (err) {
       console.error(err);
       addMemexChat({ role: 'assistant', content: 'Duh sorry, koneksi AI gue lagi error nih. Coba tanya lagi entar ya!' });

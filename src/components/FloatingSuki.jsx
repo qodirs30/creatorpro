@@ -14,7 +14,7 @@ export default function FloatingSuki() {
     memexChats, addMemexChat, clearMemexChats,
     memexCompanion, sukiKnowledge, memexCards,
     geminiKey, groqKey, openAiKey,
-    aiProvider, aiModel
+    aiProvider, aiModel, addMemexCard
   } = useAppStore();
 
   const getApiKey = () => {
@@ -128,7 +128,27 @@ export default function FloatingSuki() {
         sukiKnowledge?.content || ''
       );
 
-      addMemexChat({ role: 'assistant', content: reply.trim() });
+      let cleanReply = reply.trim();
+      const recordMatch = cleanReply.match(/<record_card>([\s\S]*?)<\/record_card>/);
+      
+      if (recordMatch) {
+        const jsonStr = recordMatch[1].trim();
+        try {
+          const cardObj = JSON.parse(jsonStr);
+          addMemexCard({
+            type: cardObj.type || 'note',
+            title: cardObj.title || 'Catatan Chat',
+            tags: cardObj.tags || ['chat'],
+            data: cardObj.data || { summary: userMsg },
+            companionComment: cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim()
+          });
+        } catch (parseErr) {
+          console.error("Gagal parse record_card dari chat Suki:", parseErr);
+        }
+        cleanReply = cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim();
+      }
+
+      addMemexChat({ role: 'assistant', content: cleanReply });
     } catch (err) {
       console.error(err);
       addMemexChat({ 
