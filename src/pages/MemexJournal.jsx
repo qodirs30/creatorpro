@@ -120,6 +120,11 @@ export default function MemexJournal() {
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef(null);
 
+  // State untuk Fitur Upload File di Chat Suki
+  const [chatSelectedFile, setChatSelectedFile] = useState(null);
+  const [chatFileDataUrl, setChatFileDataUrl] = useState(null);
+  const chatFileInputRef = useRef(null);
+
   // Kustomisasi Companion
   const [compName, setCompName] = useState(memexCompanion.name);
   const [compAvatar, setCompAvatar] = useState(memexCompanion.avatar);
@@ -705,59 +710,135 @@ export default function MemexJournal() {
     return { __html: html };
   };
 
+  const handleChatFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const MAX_SIZE_MB = 15;
+      if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+        alert(`Berkas terlalu besar! Batas maksimal ukuran berkas adalah ${MAX_SIZE_MB}MB.`);
+        return;
+      }
+      setChatSelectedFile(file);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setChatFileDataUrl(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleChatKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendChat(e);
+    }
+  };
+
   const handleSendChat = async (e) => {
-    e.preventDefault();
-    if (!chatInput.trim() || loadingChat) return;
+    if (e) e.preventDefault();
+    const userMsg = chatInput.trim();
+    if ((!userMsg && !chatSelectedFile) || loadingChat) return;
 
     if (!apiKey) {
       alert('API Key belum dikonfigurasi! Harap atur API Key Anda di menu Pengaturan.');
       return;
     }
 
-    const userMsg = chatInput.trim();
-    addMemexChat({ role: 'user', content: userMsg });
+    // Tampilkan pesan user ke chat history beserta lampiran
+    const userDisplayMsg = userMsg 
+      ? (chatSelectedFile ? `${userMsg}\n\n📎 *[Berkas: ${chatSelectedFile.name}]*` : userMsg)
+      : `📎 *[Berkas: ${chatSelectedFile.name}]*`;
+
+    addMemexChat({ role: 'user', content: userDisplayMsg });
     setChatInput('');
     setLoadingChat(true);
 
+    const currentFile = chatSelectedFile;
+    const currentDataUrl = chatFileDataUrl;
+
+    // Reset state upload
+    setChatSelectedFile(null);
+    setChatFileDataUrl(null);
+    if (chatFileInputRef.current) chatFileInputRef.current.value = '';
+
     try {
-      // Sediakan memori kartu-kartu teratas (max 5) untuk konteks AI
-      const recentCards = memexCards.slice(0, 5);
+      if (currentFile) {
+        const fileExt = currentFile.name.split('.').pop().toLowerCase();
+        const isTxt = ['txt', 'md', 'json'].includes(fileExt) || currentFile.type === 'text/plain' || currentFile.type === 'application/json';
 
-      // Generate respon companion chat
-      const reply = await generateCompanionChat(
-        apiKey,
-        memexCompanion,
-        memexChats.concat({ role: 'user', content: userMsg }),
-        recentCards,
-        userMsg,
-        aiProvider,
-        aiModel,
-        sukiKnowledge?.content || ''
-      );
-
-      let cleanReply = reply.trim();
-      const recordRegex = /<record_card>([\s\S]*?)<\/record_card>/g;
-      let match;
-      
-      while ((match = recordRegex.exec(cleanReply)) !== null) {
-        const jsonStr = match[1].trim();
-        try {
-          const cardObj = JSON.parse(jsonStr);
-          addMemexCard({
-            type: cardObj.type || 'note',
-            title: cardObj.title || 'Catatan Chat',
-            tags: cardObj.tags || ['chat'],
-            data: cardObj.data || { summary: userMsg },
-            companionComment: cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim()
-          });
-        } catch (parseErr) {
-          console.error("Gagal parse record_card dari chat Suki di Memex:", parseErr);
+        if (!isTxt && aiProvider !== 'gemini') {
+          alert('Ekstraksi berkas gambar atau PDF saat ini hanya didukung untuk model Gemini. Silakan ubah provider Anda ke Gemini di halaman Pengaturan.');
+          setLoadingChat(false);
+          return;
         }
-      }
-      
-      cleanReply = cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim();
 
-      addMemexChat({ role: 'assistant', content: cleanReply });
+        let result;
+        if (isTxt) {
+          const fileTextContent = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => resolve(event.target.result);
+            reader.onerror = () => reject(new Error('Gagal membaca file teks.'));
+            reader.readAsText(currentFile);
+          });
+          const combinedText = `Isi Dokumen (${currentFile.name}):\n${fileTextContent}\n\nCatatan Tambahan Pengguna:\n${userMsg}`;
+          result = await extractMemexCard(apiKey, combinedText, aiProvider, aiModel);
+        } else {
+          result = await extractMemexCardWithMultimodal(apiKey, currentDataUrl, userMsg, aiModel);
+        }
+
+        const newCard = {
+          id: Date.now().toString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          type: result.type || 'note',
+          title: result.title || 'Catatan Chat',
+          tags: result.tags || ['chat-upload'],
+          data: result.data || { summary: userMsg || `Lampiran: ${currentFile.name}` },
+          companionComment: result.companionComment || 'Tercatat!'
+        };
+        addMemexCard(newCard);
+
+        addMemexChat({ 
+          role: 'assistant', 
+          content: `*[Mengomentari: ${result.title}]* ${result.companionComment || 'Udah gue catat ke jurnal lo ya!'}` 
+        });
+      } else {
+        const recentCards = memexCards.slice(0, 5);
+        const reply = await generateCompanionChat(
+          apiKey,
+          memexCompanion,
+          memexChats.concat({ role: 'user', content: userMsg }),
+          recentCards,
+          userMsg,
+          aiProvider,
+          aiModel,
+          sukiKnowledge?.content || ''
+        );
+
+        let cleanReply = reply.trim();
+        const recordRegex = /<record_card>([\s\S]*?)<\/record_card>/g;
+        let match;
+        
+        while ((match = recordRegex.exec(cleanReply)) !== null) {
+          const jsonStr = match[1].trim();
+          try {
+            const cardObj = JSON.parse(jsonStr);
+            addMemexCard({
+              type: cardObj.type || 'note',
+              title: cardObj.title || 'Catatan Chat',
+              tags: cardObj.tags || ['chat'],
+              data: cardObj.data || { summary: userMsg },
+              companionComment: cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim()
+            });
+          } catch (parseErr) {
+            console.error("Gagal parse record_card dari chat Suki di Memex:", parseErr);
+          }
+        }
+        
+        cleanReply = cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim();
+
+        addMemexChat({ role: 'assistant', content: cleanReply });
+      }
     } catch (err) {
       console.error(err);
       addMemexChat({ role: 'assistant', content: 'Duh sorry, koneksi AI gue lagi error nih. Coba tanya lagi entar ya!' });
@@ -1644,23 +1725,96 @@ export default function MemexJournal() {
             </div>
 
             {/* Input Form Chat */}
-            <form onSubmit={handleSendChat} className="companion-chat-input">
-              <input
-                type="text"
+            <input 
+              type="file" 
+              ref={chatFileInputRef} 
+              onChange={handleChatFileChange} 
+              style={{ display: 'none' }}
+              accept=".txt,.md,.json,.pdf,image/*"
+            />
+
+            {chatSelectedFile && (
+              <div style={{
+                padding: '0.5rem 1rem',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.8rem',
+                color: '#94a3b8',
+                borderRadius: '8px 8px 0 0',
+                margin: '0 0.5rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
+                  <span style={{ fontSize: '1rem' }}>📄</span>
+                  <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '240px' }}>
+                    {chatSelectedFile.name}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChatSelectedFile(null);
+                    setChatFileDataUrl(null);
+                    if (chatFileInputRef.current) chatFileInputRef.current.value = '';
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#ef4444',
+                    cursor: 'pointer',
+                    padding: '2px 6px',
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            <form onSubmit={handleSendChat} className="companion-chat-input" style={{ gap: '0.5rem', display: 'flex', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => chatFileInputRef.current?.click()}
+                disabled={loadingChat}
+                style={{ padding: '0.5rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                title="Lampirkan File/Foto"
+              >
+                <Paperclip size={14} />
+              </button>
+              
+              <textarea
                 name="chatMessage"
                 autocomplete="off"
                 className="input-field"
                 placeholder={`Kirim pesan ke ${memexCompanion.name}...`}
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={handleChatKeyDown}
                 disabled={loadingChat}
-                style={{ padding: '0.5rem', borderRadius: '8px', fontSize: '0.85rem' }}
+                rows={1}
+                style={{ 
+                  padding: '0.5rem 0.75rem', 
+                  borderRadius: '8px', 
+                  fontSize: '0.85rem',
+                  resize: 'none',
+                  flex: 1,
+                  height: '36px',
+                  lineHeight: '1.4',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'rgba(0,0,0,0.2)',
+                  color: 'white',
+                  outline: 'none',
+                  fontFamily: 'inherit'
+                }}
               />
               <button 
                 type="submit" 
                 className="btn btn-primary" 
-                disabled={loadingChat || !chatInput.trim()}
-                style={{ padding: '0.5rem', borderRadius: '8px' }}
+                disabled={loadingChat || (!chatInput.trim() && !chatSelectedFile)}
+                style={{ padding: '0.5rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <Send size={14} />
               </button>

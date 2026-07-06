@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
-import { generateCompanionChat } from '../utils/ai';
+import { 
+  generateCompanionChat,
+  extractMemexCard,
+  extractMemexCardWithMultimodal
+} from '../utils/ai';
 import { 
   Send, X, Mic, MicOff, Trash2, 
-  Sparkles, MessageCircle 
+  Sparkles, MessageCircle, Plus
 } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
 
@@ -29,9 +33,12 @@ export default function FloatingSuki() {
   const [loadingChat, setLoadingChat] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showAttentionDot, setShowAttentionDot] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileDataUrl, setFileDataUrl] = useState(null);
 
   const messagesEndRef = useRef(null);
   const recognitionRef = useRef(null);
+  const fileInputRef = useRef(null);
 
 
 
@@ -100,10 +107,34 @@ export default function FloatingSuki() {
     }
   };
 
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const MAX_SIZE_MB = 15;
+      if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+        alert(`Berkas terlalu besar! Batas maksimal ukuran berkas adalah ${MAX_SIZE_MB}MB.`);
+        return;
+      }
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setFileDataUrl(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendChat(e);
+    }
+  };
+
   const handleSendChat = async (e) => {
     if (e) e.preventDefault();
     const userMsg = chatInput.trim();
-    if (!userMsg || loadingChat) return;
+    if ((!userMsg && !selectedFile) || loadingChat) return;
 
     const apiKey = getApiKey();
     if (!apiKey) {
@@ -111,46 +142,101 @@ export default function FloatingSuki() {
       return;
     }
 
-    addMemexChat({ role: 'user', content: userMsg });
+    // Tampilkan pesan user ke chat history beserta lampiran
+    const userDisplayMsg = userMsg 
+      ? (selectedFile ? `${userMsg}\n\n📎 *[Berkas: ${selectedFile.name}]*` : userMsg)
+      : `📎 *[Berkas: ${selectedFile.name}]*`;
+
+    addMemexChat({ role: 'user', content: userDisplayMsg });
     setChatInput('');
     setLoadingChat(true);
 
+    const currentFile = selectedFile;
+    const currentDataUrl = fileDataUrl;
+
+    // Reset state upload
+    setSelectedFile(null);
+    setFileDataUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+
     try {
-      const recentCards = memexCards.slice(0, 5);
-      const reply = await generateCompanionChat(
-        apiKey,
-        memexCompanion,
-        memexChats.concat({ role: 'user', content: userMsg }),
-        recentCards,
-        userMsg,
-        aiProvider,
-        aiModel,
-        sukiKnowledge?.content || ''
-      );
+      if (currentFile) {
+        const fileExt = currentFile.name.split('.').pop().toLowerCase();
+        const isTxt = ['txt', 'md', 'json'].includes(fileExt) || currentFile.type === 'text/plain' || currentFile.type === 'application/json';
 
-      let cleanReply = reply.trim();
-      const recordRegex = /<record_card>([\s\S]*?)<\/record_card>/g;
-      let match;
-      
-      while ((match = recordRegex.exec(cleanReply)) !== null) {
-        const jsonStr = match[1].trim();
-        try {
-          const cardObj = JSON.parse(jsonStr);
-          addMemexCard({
-            type: cardObj.type || 'note',
-            title: cardObj.title || 'Catatan Chat',
-            tags: cardObj.tags || ['chat'],
-            data: cardObj.data || { summary: userMsg },
-            companionComment: cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim()
-          });
-        } catch (parseErr) {
-          console.error("Gagal parse record_card dari chat Suki:", parseErr);
+        if (!isTxt && aiProvider !== 'gemini') {
+          alert('Ekstraksi berkas gambar atau PDF saat ini hanya didukung untuk model Gemini. Silakan ubah provider Anda ke Gemini di halaman Pengaturan.');
+          setLoadingChat(false);
+          return;
         }
-      }
-      
-      cleanReply = cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim();
 
-      addMemexChat({ role: 'assistant', content: cleanReply });
+        let result;
+        if (isTxt) {
+          const fileTextContent = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => resolve(event.target.result);
+            reader.onerror = () => reject(new Error('Gagal membaca file teks.'));
+            reader.readAsText(currentFile);
+          });
+          const combinedText = `Isi Dokumen (${currentFile.name}):\n${fileTextContent}\n\nCatatan Tambahan Pengguna:\n${userMsg}`;
+          result = await extractMemexCard(apiKey, combinedText, aiProvider, aiModel);
+        } else {
+          result = await extractMemexCardWithMultimodal(apiKey, currentDataUrl, userMsg, aiModel);
+        }
+
+        const newCard = {
+          id: Date.now().toString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          type: result.type || 'note',
+          title: result.title || 'Catatan Chat',
+          tags: result.tags || ['chat-upload'],
+          data: result.data || { summary: userMsg || `Lampiran: ${currentFile.name}` },
+          companionComment: result.companionComment || 'Tercatat!'
+        };
+        addMemexCard(newCard);
+
+        addMemexChat({ 
+          role: 'assistant', 
+          content: `*[Mengomentari: ${result.title}]* ${result.companionComment || 'Udah gue catat ke jurnal lo ya!'}` 
+        });
+      } else {
+        const recentCards = memexCards.slice(0, 5);
+        const reply = await generateCompanionChat(
+          apiKey,
+          memexCompanion,
+          memexChats.concat({ role: 'user', content: userMsg }),
+          recentCards,
+          userMsg,
+          aiProvider,
+          aiModel,
+          sukiKnowledge?.content || ''
+        );
+
+        let cleanReply = reply.trim();
+        const recordRegex = /<record_card>([\s\S]*?)<\/record_card>/g;
+        let match;
+        
+        while ((match = recordRegex.exec(cleanReply)) !== null) {
+          const jsonStr = match[1].trim();
+          try {
+            const cardObj = JSON.parse(jsonStr);
+            addMemexCard({
+              type: cardObj.type || 'note',
+              title: cardObj.title || 'Catatan Chat',
+              tags: cardObj.tags || ['chat'],
+              data: cardObj.data || { summary: userMsg },
+              companionComment: cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim()
+            });
+          } catch (parseErr) {
+            console.error("Gagal parse record_card dari chat Suki:", parseErr);
+          }
+        }
+        
+        cleanReply = cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim();
+
+        addMemexChat({ role: 'assistant', content: cleanReply });
+      }
     } catch (err) {
       console.error(err);
       addMemexChat({ 
@@ -361,6 +447,54 @@ export default function FloatingSuki() {
             <div ref={messagesEndRef} />
           </div>
 
+          {/* Hidden File Input */}
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            style={{ display: 'none' }}
+            accept=".txt,.md,.json,.pdf,image/*"
+          />
+
+          {/* File Upload Preview */}
+          {selectedFile && (
+            <div style={{
+              padding: '0.5rem 1rem',
+              background: 'rgba(255, 255, 255, 0.05)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.8rem',
+              color: '#94a3b8'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', overflow: 'hidden' }}>
+                <span style={{ fontSize: '1.1rem' }}>📄</span>
+                <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '240px' }}>
+                  {selectedFile.name}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedFile(null);
+                  setFileDataUrl(null);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#ef4444',
+                  cursor: 'pointer',
+                  padding: '2px 6px',
+                  fontSize: '0.9rem'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {/* Chat Input Bar */}
           <form
             onSubmit={handleSendChat}
@@ -373,6 +507,28 @@ export default function FloatingSuki() {
               alignItems: 'center',
             }}
           >
+            {/* File upload button */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                background: selectedFile ? '#a855f7' : 'rgba(255, 255, 255, 0.06)',
+                border: 'none',
+                color: selectedFile ? 'white' : '#94a3b8',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              title="Lampirkan Dokumen/Foto"
+            >
+              <Plus size={16} />
+            </button>
+
             {/* Voice input */}
             <button
               type="button"
@@ -395,13 +551,14 @@ export default function FloatingSuki() {
               {isRecording ? <MicOff size={16} /> : <Mic size={16} />}
             </button>
 
-            {/* Text input */}
-            <input
-              type="text"
+            {/* Textarea input (Shift+Enter support) */}
+            <textarea
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={handleKeyDown}
               placeholder={isRecording ? 'Mendengarkan...' : `Ketik pesan ke ${memexCompanion.name}...`}
               disabled={loadingChat}
+              rows={1}
               style={{
                 flex: 1,
                 border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -412,18 +569,22 @@ export default function FloatingSuki() {
                 fontSize: '0.85rem',
                 outline: 'none',
                 transition: 'border-color 0.2s',
+                resize: 'none',
+                height: '36px',
+                fontFamily: 'inherit',
+                lineHeight: '1.4',
               }}
             />
 
             {/* Send button */}
             <button
               type="submit"
-              disabled={!chatInput.trim() || loadingChat}
+              disabled={(!chatInput.trim() && !selectedFile) || loadingChat}
               style={{
-                background: chatInput.trim() && !loadingChat 
+                background: (chatInput.trim() || selectedFile) && !loadingChat 
                   ? 'linear-gradient(135deg, var(--primary), var(--accent))' 
                   : 'rgba(255, 255, 255, 0.06)',
-                color: chatInput.trim() && !loadingChat ? 'white' : '#64748b',
+                color: (chatInput.trim() || selectedFile) && !loadingChat ? 'white' : '#64748b',
                 border: 'none',
                 borderRadius: '50%',
                 width: '36px',
@@ -431,7 +592,7 @@ export default function FloatingSuki() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: chatInput.trim() && !loadingChat ? 'pointer' : 'not-allowed',
+                cursor: (chatInput.trim() || selectedFile) && !loadingChat ? 'pointer' : 'not-allowed',
                 transition: 'all 0.2s',
               }}
             >
