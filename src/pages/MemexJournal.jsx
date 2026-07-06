@@ -736,10 +736,11 @@ export default function MemexJournal() {
       );
 
       let cleanReply = reply.trim();
-      const recordMatch = cleanReply.match(/<record_card>([\s\S]*?)<\/record_card>/);
+      const recordRegex = /<record_card>([\s\S]*?)<\/record_card>/g;
+      let match;
       
-      if (recordMatch) {
-        const jsonStr = recordMatch[1].trim();
+      while ((match = recordRegex.exec(cleanReply)) !== null) {
+        const jsonStr = match[1].trim();
         try {
           const cardObj = JSON.parse(jsonStr);
           addMemexCard({
@@ -752,8 +753,9 @@ export default function MemexJournal() {
         } catch (parseErr) {
           console.error("Gagal parse record_card dari chat Suki di Memex:", parseErr);
         }
-        cleanReply = cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim();
       }
+      
+      cleanReply = cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim();
 
       addMemexChat({ role: 'assistant', content: cleanReply });
     } catch (err) {
