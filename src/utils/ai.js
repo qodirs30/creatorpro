@@ -215,20 +215,22 @@ export async function extractMemexCard(apiKey, text, provider = 'gemini', model 
 Teks Pengguna: "${text}"
 
 Ketentuan Ekstraksi:
-1. Tentukan jenis kartu ("type") yang paling cocok dari pilihan berikut:
-   - "task": Jika berisi tugas, rencana, atau pekerjaan yang perlu diselesaikan.
-   - "transaction": Jika berisi pengeluaran uang, pemasukan, belanja, atau transaksi finansial.
-   - "quote": Jika berisi kutipan kata bijak, lirik lagu, atau kutipan bacaan yang berharga.
-   - "contact": Jika berisi informasi tentang nama orang, hubungan, kontak baru, atau pertemuan sosial.
-   - "note": Jika berisi catatan harian acak, ide, refleksi diri, info umum, atau snippet informasi lainnya.
+1. Tentukan jenis kartu ("type") yang paling cocok dari pilihan berikut atau buat kategori kustom baru:
+   - Kategori Default:
+     - "task": Jika berisi tugas, rencana, atau pekerjaan yang perlu diselesaikan.
+     - "transaction": Jika berisi pengeluaran uang, pemasukan, belanja, atau transaksi finansial.
+     - "quote": Jika berisi kutipan kata bijak, lirik lagu, atau kutipan bacaan yang berharga.
+     - "contact": Jika berisi informasi tentang nama orang, hubungan, kontak baru, atau pertemuan sosial.
+     - "note": Jika berisi catatan harian acak, info umum, atau memo biasa.
+   - Kategori Kustom: Jika informasi tidak cocok dengan kategori default (misalnya ide baru, resep masakan, kesehatan/wellness, wishlist belanjaan, mimpi, log hobi, dll), buatlah kategori baru dalam 1 kata lowercase (contoh: "ide", "resep", "kesehatan", "wishlist", "hobi", "mimpi").
 2. Buat "title" berupa judul yang sangat singkat, padat, dan representatif (maksimal 5 kata).
 3. Buat array "tags" berisi kata kunci penting (1-3 kata kunci, lowercase, tanpa spasi panjang).
 4. Buat objek "data" berisi detail spesifik tergantung tipenya:
    - Jika "task": { "todo": "deskripsi tugas", "dueDate": "tanggal tenggat format YYYY-MM-DD (jika ada, jika tidak kosongkan)" }
-    - Jika "transaction": { "amount": angka nominal uang (wajib integer angka murni tanpa titik/koma/simbol. GUNA ATURAN RIBUAN: Jika pengguna menginput nominal angka singkat/kecil tanpa ribuan, contoh: "15", "50", "150", konversikan otomatis ke ribuan dengan mengalikan 1000 sehingga menjadi 15000, 50000, 150000. Kecuali jika nominal sudah ditulis lengkap seperti 15000), "category": "makanan/transportasi/hosting/kopi/lainnya", "type": "expense" atau "income" }
-    - Jika "quote": { "quote": "teks kutipan", "author": "nama penulis kutipan (jika ada, jika tidak tulis 'Anonim')" }
-    - Jika "contact": { "name": "nama orang", "relationship": "rekan kerja/teman/keluarga/klien", "context": "keterangan pertemuan/catatan" }
-    - Jika "note": { "summary": "ringkasan isi catatan dalam 1-2 kalimat" }
+   - Jika "transaction": { "amount": angka nominal uang (wajib integer angka murni tanpa titik/koma/simbol. GUNA ATURAN RIBUAN: Jika pengguna menginput nominal angka singkat/kecil tanpa ribuan, contoh: "15", "50", "150", konversikan otomatis ke ribuan dengan mengalikan 1000 sehingga menjadi 15000, 50000, 150000. Kecuali jika nominal sudah ditulis lengkap seperti 15000), "category": "makanan/transportasi/hosting/kopi/lainnya", "type": "expense" atau "income" }
+   - Jika "quote": { "quote": "teks kutipan", "author": "nama penulis kutipan (jika ada, jika tidak tulis 'Anonim')" }
+   - Jika "contact": { "name": "nama orang", "relationship": "rekan kerja/teman/keluarga/klien", "context": "keterangan pertemuan/catatan" }
+   - Jika "note" atau kategori kustom lainnya: { "summary": "ringkasan isi catatan/informasi dalam 1-2 kalimat" }
 5. Buat properti "companionComment". Ini adalah komentar spontan yang ditulis dari perspektif karakter AI Companion bernama Suki. Suki adalah teman dekat yang santai, menggunakan gaya bicara gaul santai/lucu kekinian Indonesia (gue, lo, dll), agak usil/humoris, menyemangati namun bisa bercanda meledek jika kegiatannya aneh/berlebihan. Sesuaikan komentar dengan isi teks pengguna.
 
 Harus mengembalikan output dalam format JSON MURNI yang valid tanpa teks pembuka atau penutup lainnya. Jangan gunakan backticks markdown di luar json. Format JSON yang dikembalikan harus berupa:
@@ -312,18 +314,22 @@ Instruksi Tambahan:
 Jawablah pesan pengguna menggunakan gaya kepribadianmu di atas. Tulis jawaban yang singkat (1-3 kalimat) agar terasa natural seperti bertukar pesan instan/chatting. Jangan terlalu formal! Gunakan gaya bahasa kasual.
 
 Kemampuan Mencatat (WAJIB):
-Jika dalam pesan pengguna terdeteksi permintaan atau pernyataan berniat mencatat sesuatu (seperti mencatat pengeluaran/pemasukan uang, tugas baru, jadwal, kutipan, kontak orang baru, atau catatan ide), maka selain membalas chat secara kasual, kamu WAJIB menyertakan blok XML/JSON berikut di paling bawah jawabanmu untuk dimasukkan ke database. Jika pengguna meminta mencatat beberapa hal sekaligus (misalnya daftar transaksi atau tugas sekaligus), kamu BISA menyertakan beberapa blok <record_card>...</record_card> terpisah (satu blok untuk tiap item):
+Jika dalam pesan pengguna terdeteksi permintaan atau pernyataan berniat mencatat sesuatu (seperti mencatat pengeluaran/pemasukan uang, tugas baru, jadwal, kutipan, kontak orang baru, ide cemerlang, resep masakan, log kesehatan, wishlist, mimpi, dll), maka selain membalas chat secara kasual, kamu WAJIB menyertakan blok XML/JSON berikut di paling bawah jawabanmu untuk dimasukkan ke database. Kamu dibebaskan menggunakan tipe default atau membuat kategori kustom baru (dalam 1 kata lowercase, misal "ide", "resep", "wishlist", "hobi", dll). 
+
+Pastikan dalam balasan chat kasualmu, kamu secara eksplisit mengonfirmasi kepada pengguna bahwa catatan tersebut sudah dimasukkan ke kategori terkait (contoh: "Ide lo cemerlang banget, udah gue catat ke kartu ide ya!", atau "Oke, pengeluaran itu udah masuk ke kartu keuangan.").
+
+Jika pengguna meminta mencatat beberapa hal sekaligus, kamu BISA menyertakan beberapa blok <record_card>...</record_card> terpisah (satu blok untuk tiap item):
 <record_card>
 {
-  "type": "task | transaction | quote | contact | note",
+  "type": "task | transaction | quote | contact | note | [kategori_kustom_lainnya_1_kata_lowercase]",
   "title": "Judul singkat kartu representatif (maksimal 5 kata)",
   "tags": ["tag1", "tag2"],
   "data": { 
     // Jika "task": { "todo": "deskripsi tugas", "dueDate": "tanggal YYYY-MM-DD (jika ada)" }
-    // Jika "transaction": { "amount": integer nominal uang murni (Gunakan aturan ribuan: jika ditulis angka singkat seperti 15, 50, anggap itu dalam ribuan (dikalikan 1000) sehingga menjadi 15000, 50000. Kecuali ditulis lengkap), "category": "makanan/transportasi/kopi/lainnya", "type": "expense" atau "income" }
+    // Jika "transaction": { "amount": nominal uang murni (integer), "category": "makanan/transportasi/kopi/lainnya", "type": "expense" atau "income" }
     // Jika "quote": { "quote": "teks kutipan", "author": "penulis (default: Anonim)" }
     // Jika "contact": { "name": "nama orang", "relationship": "rekan/teman/keluarga/klien", "context": "catatan pertemuan" }
-    // Jika "note": { "summary": "ringkasan isi catatan" }
+    // Jika "note" atau kategori kustom lainnya: { "summary": "ringkasan isi atau detail informasi" }
   }
 }
 </record_card>
@@ -391,12 +397,14 @@ Catatan Tambahan Pengguna: "${textPrompt || 'Tidak ada catatan tambahan'}"
 Harap analisis konten dokumen/gambar tersebut dan lakukan ekstraksi menjadi format JSON kartu jurnal terstruktur.
 
 Ketentuan Ekstraksi:
-1. Tentukan jenis kartu ("type") yang paling cocok dari pilihan berikut:
-   - "task": Jika berisi tugas, rencana, atau pekerjaan yang perlu diselesaikan.
-   - "transaction": Jika berisi pengeluaran uang, pemasukan, belanja, atau transaksi finansial (misal struk belanja, kuitansi).
-   - "quote": Jika berisi kutipan kata bijak, lirik lagu, atau kutipan bacaan yang berharga.
-   - "contact": Jika berisi informasi tentang nama orang, hubungan, kontak baru, atau pertemuan sosial.
-   - "note": Jika berisi catatan harian, ide, info umum, ringkasan isi dokumen, atau memo biasa.
+1. Tentukan jenis kartu ("type") yang paling cocok dari pilihan berikut atau buat kategori kustom baru:
+   - Kategori Default:
+     - "task": Jika berisi tugas, rencana, atau pekerjaan yang perlu diselesaikan.
+     - "transaction": Jika berisi pengeluaran uang, pemasukan, belanja, atau transaksi finansial (misal struk belanja, kuitansi).
+     - "quote": Jika berisi kutipan kata bijak, lirik lagu, atau kutipan bacaan yang berharga.
+     - "contact": Jika berisi informasi tentang nama orang, hubungan, kontak baru, atau pertemuan sosial.
+     - "note": Jika berisi catatan harian, ide, info umum, ringkasan isi dokumen, atau memo biasa.
+   - Kategori Kustom: Jika informasi tidak cocok dengan kategori default (misalnya ide baru, resep masakan, kesehatan/wellness, wishlist belanjaan, mimpi, log hobi, dll), buatlah kategori baru dalam 1 kata lowercase (contoh: "ide", "resep", "kesehatan", "wishlist", "hobi", "mimpi").
 2. Buat "title" berupa judul yang sangat singkat, padat, dan representatif (maksimal 5 kata) yang meringkas isi dokumen/gambar.
 3. Buat array "tags" berisi kata kunci penting (1-3 kata kunci, lowercase, tanpa spasi panjang).
 4. Buat objek "data" berisi detail spesifik tergantung tipenya:
@@ -404,7 +412,7 @@ Ketentuan Ekstraksi:
    - Jika "transaction": { "amount": angka nominal uang (wajib integer angka murni tanpa titik/koma/simbol. GUNA ATURAN RIBUAN: Jika pengguna menginput nominal angka singkat/kecil tanpa ribuan, contoh: "15", "50", "150", konversikan otomatis ke ribuan dengan mengalikan 1000 sehingga menjadi 15000, 50000, 150000. Kecuali jika nominal sudah ditulis lengkap seperti 15000), "category": "makanan/transportasi/hosting/kopi/lainnya", "type": "expense" atau "income" }
    - Jika "quote": { "quote": "teks kutipan", "author": "nama penulis kutipan (jika ada, jika tidak tulis 'Anonim')" }
    - Jika "contact": { "name": "nama orang", "relationship": "rekan kerja/teman/keluarga/klien", "context": "keterangan pertemuan/catatan" }
-   - Jika "note": { "summary": "ringkasan isi atau deskripsi dari dokumen/gambar tersebut dalam 1-2 kalimat" }
+   - Jika "note" atau kategori kustom lainnya: { "summary": "ringkasan isi atau deskripsi dari dokumen/gambar tersebut dalam 1-2 kalimat" }
 5. Buat properti "companionComment". Ini adalah komentar spontan yang ditulis dari perspektif karakter AI Companion bernama Suki. Suki adalah teman dekat yang santai, menggunakan gaya bicara gaul santai/lucu kekinian Indonesia (gue, lo, dll), agak usil/humoris, menyemangati namun bisa bercanda meledek jika isi dokumennya aneh/kocak. Sesuaikan komentar dengan isi berkas tersebut.
 
 Harus mengembalikan output dalam format JSON MURNI yang valid tanpa teks pembuka atau penutup lainnya. Jangan gunakan backticks markdown di luar json. Format JSON yang dikembalikan harus berupa:

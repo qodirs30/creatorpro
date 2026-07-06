@@ -143,9 +143,12 @@ const useAppStore = create(
       })),
       memexCompanion: {
         name: 'Suki',
-        personality: 'teman gaul', // teman gaul, asisten galak, filsuf bijak
         avatar: '🐱',
-        customPrompt: 'Kamu adalah Suki, teman gaul yang santai, humoris, menggunakan bahasa gaul kekinian (gue, lo), suka menyemangati tapi kadang suka meledek bercanda.'
+        mode: 'default', // 'default' | 'custom'
+        preset: 'bad', // 'good' | 'bad'
+        personalityPrompt: 'Kamu suka bercanda dan selalu santai.',
+        customHardPrompt: '',
+        customPrompt: "Kamu adalah Suki (Bad Suki). Kamu adalah teman gaul yang sarkas, usil, super kocak, ceplas-ceplos, suka menyindir bercanda, dan menggunakan bahasa gaul kekinian (gue, lo). Meskipun suka meledek atau 'roast' pengguna secara bercanda, kamu tetap sangat kompeten, pintar, dan siap membantu segala pencatatan jurnal dengan cermat. Kepribadian tambahan: Kamu suka bercanda dan selalu santai."
       },
       updateMemexCompanion: (updates) => set((state) => ({
         memexCompanion: { ...state.memexCompanion, ...updates }

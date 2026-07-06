@@ -129,6 +129,10 @@ export default function MemexJournal() {
   const [compName, setCompName] = useState(memexCompanion.name);
   const [compAvatar, setCompAvatar] = useState(memexCompanion.avatar);
   const [compPrompt, setCompPrompt] = useState(memexCompanion.customPrompt);
+  const [compMode, setCompMode] = useState(memexCompanion.mode || 'default');
+  const [compPreset, setCompPreset] = useState(memexCompanion.preset || 'bad');
+  const [compPersonality, setCompPersonality] = useState(memexCompanion.personalityPrompt || 'Kamu suka bercanda dan selalu santai.');
+  const [compHardPrompt, setCompHardPrompt] = useState(memexCompanion.customHardPrompt || '');
 
   // State untuk Editor & Markdown Modal
   const [editingCard, setEditingCard] = useState(null);
@@ -298,13 +302,26 @@ export default function MemexJournal() {
   const handleSaveEditCard = async () => {
     if (!editingCard) return;
 
-    const updatedCard = {
-      ...editingCard,
-      updatedAt: new Date().toISOString()
-    };
+    if (!editingCard.title.trim()) {
+      alert("Judul kartu tidak boleh kosong!");
+      return;
+    }
 
-    // Update di store lokal
-    updateMemexCard(editingCard.id, updatedCard);
+    if (editingCard.id) {
+      const updatedCard = {
+        ...editingCard,
+        updatedAt: new Date().toISOString()
+      };
+      updateMemexCard(editingCard.id, updatedCard);
+    } else {
+      const newCard = {
+        ...editingCard,
+        id: Date.now().toString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      addMemexCard(newCard);
+    }
 
     setEditingCard(null);
   };
@@ -848,11 +865,28 @@ export default function MemexJournal() {
   };
 
   const handleSaveCompanion = () => {
+    let compiledPrompt = '';
+    const name = compName.trim() || 'Suki';
+    if (compMode === 'default') {
+      if (compPreset === 'good') {
+        compiledPrompt = `Kamu adalah ${name} (Good ${name}). Kamu sangat suportif, ramah, lemah lembut, sabar, manis, selalu memberikan saran-saran positif untuk membantu produktivitas pengguna, menyapa dengan sapaan hangat, dan bertutur kata sopan. Kepribadian tambahan: ${compPersonality}`;
+      } else {
+        compiledPrompt = `Kamu adalah ${name} (Bad ${name}). Kamu adalah teman gaul yang sarkas, usil, super kocak, ceplas-ceplos, suka menyindir bercanda, dan menggunakan bahasa gaul kekinian (gue, lo). Meskipun suka meledek atau 'roast' pengguna secara bercanda, kamu tetap sangat kompeten, pintar, dan siap membantu segala pencatatan jurnal dengan cermat. Kepribadian tambahan: ${compPersonality}`;
+      }
+    } else {
+      compiledPrompt = `${compHardPrompt}\nKepribadian tambahan: ${compPersonality}`;
+    }
+
     updateMemexCompanion({
-      name: compName,
+      name: name,
       avatar: compAvatar,
-      customPrompt: compPrompt
+      mode: compMode,
+      preset: compPreset,
+      personalityPrompt: compPersonality,
+      customHardPrompt: compHardPrompt,
+      customPrompt: compiledPrompt
     });
+    setCompPrompt(compiledPrompt);
     setIsConfiguring(false);
   };
 
@@ -1023,15 +1057,30 @@ export default function MemexJournal() {
           
           {/* Tab Filter Kartu (moved to the top!) */}
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', overflowX: 'auto', paddingBottom: '0.25rem' }}>
-            {[
-              { id: 'all', label: 'Semua Kartu' },
-              { id: 'task', label: 'Tugas' },
-              { id: 'transaction', label: 'Keuangan' },
-              { id: 'note', label: 'Catatan' },
-              { id: 'quote', label: 'Kutipan' },
-              { id: 'contact', label: 'Kontak' },
-              { id: 'suki-knowledge', label: 'Pengetahuan Suki 📖' }
-            ].map(tab => (
+            {(() => {
+              const defaultTabs = [
+                { id: 'all', label: 'Semua Kartu' },
+                { id: 'task', label: 'Tugas' },
+                { id: 'transaction', label: 'Keuangan' },
+                { id: 'note', label: 'Catatan' },
+                { id: 'quote', label: 'Kutipan' },
+                { id: 'contact', label: 'Kontak' },
+              ];
+              const defaultTypes = ['task', 'transaction', 'note', 'quote', 'contact'];
+              const customTypes = Array.from(new Set(
+                (memexCards || [])
+                  .map(c => c.type)
+                  .filter(type => type && !defaultTypes.includes(type))
+              ));
+              return [
+                ...defaultTabs,
+                ...customTypes.map(type => ({
+                  id: type,
+                  label: type.charAt(0).toUpperCase() + type.slice(1)
+                })),
+                { id: 'suki-knowledge', label: 'Pengetahuan Suki 📖' }
+              ];
+            })().map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
@@ -1094,9 +1143,40 @@ export default function MemexJournal() {
                   </div>
                 )}
 
-                <h3 style={{ marginBottom: '1rem', fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Sparkles size={18} color="var(--primary)" /> Tulis Fragmen Hari Ini
-                </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <h3 style={{ fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                    <Sparkles size={18} color="var(--primary)" /> Tulis Fragmen Hari Ini
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingCard({
+                        id: '',
+                        title: '',
+                        type: 'note',
+                        tags: [],
+                        data: { summary: '' },
+                        companionComment: 'Kartu ini dibuat secara manual oleh pengguna.'
+                      });
+                      setActiveModalTab('edit');
+                    }}
+                    className="btn btn-secondary"
+                    style={{ 
+                      fontSize: '0.75rem', 
+                      padding: '4px 10px', 
+                      borderRadius: '12px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '4px',
+                      cursor: 'pointer',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--bg-card)',
+                      color: 'var(--text-secondary)'
+                    }}
+                  >
+                    + Buat Kartu Manual
+                  </button>
+                </div>
                 <form onSubmit={handleCaptureSubmit} className="memex-capture-form">
                   <input
                     type="text"
@@ -1225,8 +1305,8 @@ export default function MemexJournal() {
                     <div key={card.id} className={`card memex-card card-${card.type}`} style={{ padding: '1.25rem 1.5rem' }}>
                       <div className="memex-card-header">
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                          {cardIcons[card.type] || <FileText size={16} />}
-                          <span className="memex-card-type">{card.type}</span>
+                           {cardIcons[card.type] || <Sparkles size={16} color="#ec4899" />}
+                           <span className="memex-card-type" style={{ textTransform: 'capitalize' }}>{card.type}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                           <button
@@ -1307,7 +1387,7 @@ export default function MemexJournal() {
                           </div>
                         )}
 
-                        {card.type === 'note' && (
+                        {(card.type === 'note' || !['transaction', 'task', 'quote', 'contact'].includes(card.type)) && (
                           <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', lineHeight: 1.5 }}>
                             {card.data.summary}
                           </p>
@@ -1649,13 +1729,77 @@ export default function MemexJournal() {
                   </div>
                 </div>
 
+                {/* Pilih Mode */}
                 <div>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '0.25rem' }}>Prompt Karakter (Personality)</label>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '0.25rem' }}>Mode Sistem</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      className={`btn ${compMode === 'default' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setCompMode('default')}
+                      style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem' }}
+                    >
+                      Preset Bawaan
+                    </button>
+                    <button
+                      type="button"
+                      className={`btn ${compMode === 'custom' ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setCompMode('custom')}
+                      style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem' }}
+                    >
+                      Kustom Penuh
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sub-opsi Mode Bawaan */}
+                {compMode === 'default' ? (
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '0.25rem' }}>Pilih Karakter Bawaan</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        className={`btn ${compPreset === 'bad' ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => setCompPreset('bad')}
+                        style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', borderColor: compPreset === 'bad' ? 'var(--primary)' : 'rgba(255,255,255,0.1)' }}
+                      >
+                        😈 Bad {compName} (Sarkas/Kocak)
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn ${compPreset === 'good' ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => setCompPreset('good')}
+                        style={{ flex: 1, padding: '0.4rem', fontSize: '0.8rem', borderColor: compPreset === 'good' ? 'var(--primary)' : 'rgba(255,255,255,0.1)' }}
+                      >
+                        😇 Good {compName} (Manis/Sopan)
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '0.25rem' }}>Hard Prompt Utama (System Instruction)</label>
+                    <textarea
+                      className="input-field"
+                      placeholder="Masukkan instruksi inti sistem untuk AI..."
+                      value={compHardPrompt}
+                      onChange={(e) => setCompHardPrompt(e.target.value)}
+                      rows={4}
+                      style={{ padding: '0.5rem', fontSize: '0.85rem', resize: 'vertical', fontFamily: 'inherit' }}
+                    />
+                  </div>
+                )}
+
+                {/* Personality Prompt */}
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 'bold', display: 'block', marginBottom: '0.25rem' }}>
+                    {compMode === 'default' ? 'Kustomisasi Tambahan Kepribadian' : 'Prompt Kepribadian (Personality)'}
+                  </label>
                   <textarea
                     className="input-field"
-                    value={compPrompt}
-                    onChange={(e) => setCompPrompt(e.target.value)}
-                    rows={4}
+                    placeholder="misal: Suka menyapa dengan kata 'Halo Bos!', atau sering bercanda soal kopi..."
+                    value={compPersonality}
+                    onChange={(e) => setCompPersonality(e.target.value)}
+                    rows={3}
                     style={{ padding: '0.5rem', fontSize: '0.85rem', resize: 'vertical', fontFamily: 'inherit' }}
                   />
                 </div>
@@ -1671,7 +1815,7 @@ export default function MemexJournal() {
               </div>
             ) : (
               <p style={{ fontStyle: 'italic', fontSize: '0.85rem', color: 'var(--text-secondary)', margin: 0 }}>
-                "{memexCompanion.customPrompt.substring(0, 75)}..."
+                "{memexCompanion.customPrompt.substring(0, 95)}..."
               </p>
             )}
           </div>
@@ -1855,7 +1999,7 @@ export default function MemexJournal() {
             {/* Modal Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
               <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Edit3 size={20} color="var(--primary)" /> Detail & Revisi Kartu
+                <Edit3 size={20} color="var(--primary)" /> {editingCard.id ? 'Detail & Revisi Kartu' : 'Tambah Kartu Manual'}
               </h3>
               <button 
                 onClick={() => setEditingCard(null)} 
@@ -1926,7 +2070,7 @@ export default function MemexJournal() {
                     lineHeight: 1.6
                   }}
                   dangerouslySetInnerHTML={
-                    editingCard.type === 'note' 
+                    (editingCard.type === 'note' || !['task', 'quote', 'contact', 'transaction'].includes(editingCard.type))
                       ? renderMarkdown(editingCard.data?.summary)
                       : editingCard.type === 'task'
                       ? renderMarkdown(editingCard.data?.todo)
@@ -2007,35 +2151,60 @@ export default function MemexJournal() {
                 {/* Tipe Kartu */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Tipe Kartu</label>
-                  <select
+                   <select
                     className="input-field"
-                    value={editingCard.type}
-                    onChange={(e) => setEditingCard({ ...editingCard, type: e.target.value })}
+                    value={['note', 'task', 'transaction', 'quote', 'contact'].includes(editingCard.type) ? editingCard.type : 'custom'}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'custom') {
+                        setEditingCard({ ...editingCard, type: 'ide', data: { ...editingCard.data, summary: editingCard.data?.summary || '' } });
+                      } else {
+                        setEditingCard({ ...editingCard, type: val, data: {} });
+                      }
+                    }}
                   >
                     <option value="note">Catatan (Note)</option>
                     <option value="task">Tugas (Task)</option>
                     <option value="transaction">Keuangan (Transaction)</option>
                     <option value="quote">Kutipan (Quote)</option>
                     <option value="contact">Kontak (Contact)</option>
+                    <option value="custom">Kategori Kustom...</option>
                   </select>
                 </div>
 
-                {/* Spesifik Data Field Editor */}
-                {editingCard.type === 'note' && (
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Catatan / Isi Rangkuman (Format Markdown)</label>
-                    <textarea
+                {/* Input Nama Kategori Kustom */}
+                {!['note', 'task', 'transaction', 'quote', 'contact'].includes(editingCard.type) && (
+                  <div style={{ marginTop: '0.75rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Nama Kategori Kustom (1 kata, lowercase)</label>
+                    <input
+                      type="text"
                       className="input-field"
-                      rows={6}
-                      value={editingCard.data?.summary || ''}
-                      onChange={(e) => setEditingCard({
-                        ...editingCard,
-                        data: { ...editingCard.data, summary: e.target.value }
+                      placeholder="misal: ide, resep, hobi"
+                      value={editingCard.type}
+                      onChange={(e) => setEditingCard({ 
+                        ...editingCard, 
+                        type: e.target.value.toLowerCase().replace(/\s+/g, '') 
                       })}
-                      style={{ fontFamily: 'inherit', resize: 'vertical' }}
                     />
                   </div>
                 )}
+
+              {/* Spesifik Data Field Editor */}
+              {(editingCard.type === 'note' || !['note', 'task', 'transaction', 'quote', 'contact'].includes(editingCard.type)) && (
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Isi Rangkuman / Detail (Format Markdown)</label>
+                  <textarea
+                    className="input-field"
+                    rows={6}
+                    value={editingCard.data?.summary || ''}
+                    onChange={(e) => setEditingCard({
+                      ...editingCard,
+                      data: { ...editingCard.data, summary: e.target.value }
+                    })}
+                    style={{ fontFamily: 'inherit', resize: 'vertical' }}
+                  />
+                </div>
+              )}
 
                 {editingCard.type === 'task' && (
                   <>
@@ -2197,12 +2366,12 @@ export default function MemexJournal() {
               >
                 Batal
               </button>
-              <button 
+               <button 
                 className="btn btn-primary" 
                 onClick={handleSaveEditCard}
                 style={{ flex: 1, margin: 0 }}
               >
-                Simpan Perubahan
+                {editingCard.id ? 'Simpan Perubahan' : 'Tambah Kartu'}
               </button>
             </div>
           </div>
