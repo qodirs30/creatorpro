@@ -19,6 +19,7 @@ import {
   downloadBackupFromDatabase 
 } from '../utils/firebase';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import NeracaDashboard from '../components/NeracaDashboard';
 
 // Helper to extract selectable text from PDF files using PDF.js locally in the browser
 const extractTextFromPdf = (file) => {
@@ -1100,6 +1101,7 @@ export default function MemexJournal() {
                   id: type,
                   label: type.charAt(0).toUpperCase() + type.slice(1)
                 })),
+                { id: 'neraca', label: '💰 Neraca' },
                 { id: 'suki-knowledge', label: 'Pengetahuan Suki 📖' }
               ];
             })().map(tab => (
@@ -1124,7 +1126,20 @@ export default function MemexJournal() {
             ))}
           </div>
 
-          {activeTab !== 'suki-knowledge' ? (
+          {activeTab === 'neraca' ? (
+            <NeracaDashboard
+              memexCards={memexCards}
+              formatCurrency={formatCurrency}
+              onAskSuki={(msg) => {
+                setActiveTab('all');
+                setTimeout(() => {
+                  setCaptureText(msg);
+                }, 100);
+              }}
+              addMemexChat={addMemexChat}
+              setMobileActiveView={setMobileActiveView}
+            />
+          ) : activeTab !== 'suki-knowledge' ? (
             <>
               {/* Form Quick Capture */}
               <div 

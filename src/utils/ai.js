@@ -269,32 +269,154 @@ Harus mengembalikan output dalam format JSON MURNI yang valid tanpa teks pembuka
  * Menghasilkan balasan chat dari AI Companion berdasarkan riwayat chat dan memori kartu.
  */
 export async function generateCompanionChat(apiKey, companion, chatHistory, cardsContext, userMessage, provider = 'gemini', model = 'gemini-2.5-flash', sukiKnowledge = '') {
-  // Buat ringkasan semua kartu dari database, diurutkan terbaru, dengan tanggal
-  const buildCardsSummary = (cards) => {
-    if (!cards || cards.length === 0) return 'Belum ada catatan di database.';
-
-    // Urutkan kartu dari terbaru ke terlama
-    const sorted = [...cards].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-
-    // Batasi ke 100 kartu terbaru agar prompt tidak terlalu besar
-    const limited = sorted.slice(0, 100);
-
-    // Format setiap kartu dengan tanggal pembuatan
-    return limited.map(c => {
-      const dateStr = c.createdAt
-        ? new Date(c.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
-        : 'Tanggal tidak diketahui';
-      let details;
-      if (c.type === 'transaction') details = `Transaksi: Rp ${c.data?.amount?.toLocaleString('id-ID') || 0} (${c.data?.category || '-'}, ${c.data?.type || '-'})`;
-      else if (c.type === 'task') details = `Tugas: ${c.data?.todo || '-'} (Tenggat: ${c.data?.dueDate || '-'})`;
-      else if (c.type === 'quote') details = `Kutipan: "${c.data?.quote || '-'}" oleh ${c.data?.author || 'Anonim'}`;
-      else if (c.type === 'contact') details = `Kontak: ${c.data?.name || '-'} (${c.data?.relationship || '-'})`;
-      else details = `Catatan: ${c.data?.summary || '-'}`;
-      return `- [${dateStr}] [${c.type.toUpperCase()}] ${c.title} — ${details}`;
-    }).join('\n');
+  // ─── Helper: Format rupiah compact ───────────────────────────────────────
+  const fmtRp = (n) => {
+    if (!n) return 'Rp 0';
+    if (n >= 1_000_000) return `Rp ${(n / 1_000_000).toFixed(1)}jt`;
+    if (n >= 1_000) return `Rp ${(n / 1_000).toFixed(0)}rb`;
+    return `Rp ${n}`;
   };
 
-  const cardsSummary = buildCardsSummary(cardsContext);
+  // ─── Helper: Format kartu detail ─────────────────────────────────────────
+  const fmtCard = (c) => {
+    const d = c.createdAt
+      ? new Date(c.createdAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      : '?';
+    let detail;
+    if (c.type === 'transaction') {
+      const sign = c.data?.type === 'income' ? '+' : '-';
+      detail = `${sign}${fmtRp(c.data?.amount)} | ${c.data?.category || '-'} | ${c.data?.type === 'income' ? 'Pemasukan' : 'Pengeluaran'}`;
+    } else if (c.type === 'task') detail = `Tugas: ${c.data?.todo || '-'} (Tenggat: ${c.data?.dueDate || '-'})`;
+    else if (c.type === 'quote') detail = `"${c.data?.quote || '-'}" — ${c.data?.author || 'Anonim'}`;
+    else if (c.type === 'contact') detail = `${c.data?.name || '-'} (${c.data?.relationship || '-'})`;
+    else detail = c.data?.summary || '-';
+    return `  • [${d}] [${(c.type || 'note').toUpperCase()}] ${c.title} → ${detail}`;
+  };
+
+  // ─── Layer 1: Monthly Summary Table (selalu diinject, sangat compact) ────
+  const buildMonthlySummary = (cards) => {
+    if (!cards || cards.length === 0) return 'Database kosong, belum ada catatan.';
+    const byMonth = {};
+    cards.forEach(c => {
+      const dt = new Date(c.createdAt || 0);
+      const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`;
+      const label = dt.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+      if (!byMonth[key]) byMonth[key] = { label, income: 0, expense: 0, txCount: 0, otherCount: 0 };
+      if (c.type === 'transaction') {
+        byMonth[key].txCount++;
+        if (c.data?.type === 'income') byMonth[key].income += (c.data?.amount || 0);
+        else byMonth[key].expense += (c.data?.amount || 0);
+      } else {
+        byMonth[key].otherCount++;
+      }
+    });
+    const months = Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0]));
+    const lines = months.map(([, m]) => {
+      const saldo = m.income - m.expense;
+      const saldoStr = saldo >= 0 ? `+${fmtRp(saldo)}` : `-${fmtRp(Math.abs(saldo))}`;
+      return `  ${m.label}: Masuk ${fmtRp(m.income)} | Keluar ${fmtRp(m.expense)} | Saldo ${saldoStr} | ${m.txCount} transaksi${m.otherCount > 0 ? ` + ${m.otherCount} catatan lain` : ''}`;
+    });
+    return lines.join('\n');
+  };
+
+  // ─── Layer 2: Smart Detail Inject — deteksi periode dari pesan user ───────
+  const buildDetailContext = (cards, message) => {
+    if (!cards || cards.length === 0) return '';
+    const msg = (message || '').toLowerCase();
+    const now = new Date();
+
+    // Daftar nama bulan Indonesia
+    const bulanMap = {
+      'januari': 0, 'februari': 1, 'maret': 2, 'april': 3, 'mei': 4, 'juni': 5,
+      'juli': 6, 'agustus': 7, 'september': 8, 'oktober': 9, 'november': 10, 'desember': 11
+    };
+
+    let filtered = null;
+    let periodLabel = '';
+
+    // Cek keyword periode
+    if (/hari ini|today/.test(msg)) {
+      const today = now.toDateString();
+      filtered = cards.filter(c => new Date(c.createdAt || 0).toDateString() === today);
+      periodLabel = 'Hari Ini';
+    } else if (/kemarin|yesterday/.test(msg)) {
+      const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+      const yStr = yesterday.toDateString();
+      filtered = cards.filter(c => new Date(c.createdAt || 0).toDateString() === yStr);
+      periodLabel = 'Kemarin';
+    } else if (/minggu ini|pekan ini/.test(msg)) {
+      const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7);
+      filtered = cards.filter(c => new Date(c.createdAt || 0) >= weekAgo);
+      periodLabel = '7 Hari Terakhir';
+    } else if (/minggu lalu/.test(msg)) {
+      const start = new Date(now); start.setDate(now.getDate() - 14);
+      const end = new Date(now); end.setDate(now.getDate() - 7);
+      filtered = cards.filter(c => { const d = new Date(c.createdAt || 0); return d >= start && d < end; });
+      periodLabel = 'Minggu Lalu';
+    } else if (/bulan ini|this month/.test(msg)) {
+      filtered = cards.filter(c => {
+        const d = new Date(c.createdAt || 0);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
+      periodLabel = `Bulan Ini (${now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })})`;
+    } else if (/bulan lalu|last month/.test(msg)) {
+      const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+      const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      filtered = cards.filter(c => {
+        const d = new Date(c.createdAt || 0);
+        return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+      });
+      periodLabel = 'Bulan Lalu';
+    } else if (/tahun ini|this year/.test(msg)) {
+      filtered = cards.filter(c => new Date(c.createdAt || 0).getFullYear() === now.getFullYear());
+      periodLabel = `Tahun ${now.getFullYear()}`;
+    } else if (/tahun lalu|last year/.test(msg)) {
+      filtered = cards.filter(c => new Date(c.createdAt || 0).getFullYear() === now.getFullYear() - 1);
+      periodLabel = `Tahun ${now.getFullYear() - 1}`;
+    } else {
+      // Cek nama bulan spesifik
+      for (const [bulan, idx] of Object.entries(bulanMap)) {
+        if (msg.includes(bulan)) {
+          // Cek juga tahun jika disebut
+          const yearMatch = msg.match(/20\d{2}/);
+          const year = yearMatch ? parseInt(yearMatch[0]) : now.getFullYear();
+          filtered = cards.filter(c => {
+            const d = new Date(c.createdAt || 0);
+            return d.getMonth() === idx && d.getFullYear() === year;
+          });
+          periodLabel = `${bulan.charAt(0).toUpperCase() + bulan.slice(1)} ${year}`;
+          break;
+        }
+      }
+    }
+
+    // Kalau keyword "semua" / "total" / "neraca" / "laporan" tanpa periode → inject semua (max 200)
+    if (!filtered && /neraca|laporan|semua|rekap|rekapitulasi|riwayat|history/.test(msg)) {
+      filtered = [...cards].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)).slice(0, 200);
+      periodLabel = 'Semua Waktu (200 terbaru)';
+    }
+
+    if (!filtered || filtered.length === 0) return '';
+
+    // Urutkan terbaru ke terlama
+    const sorted = filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    // Hitung total keuangan untuk periode ini
+    const txCards = sorted.filter(c => c.type === 'transaction');
+    const totalMasuk = txCards.filter(c => c.data?.type === 'income').reduce((s, c) => s + (c.data?.amount || 0), 0);
+    const totalKeluar = txCards.filter(c => c.data?.type !== 'income').reduce((s, c) => s + (c.data?.amount || 0), 0);
+    const saldo = totalMasuk - totalKeluar;
+
+    let header = `\n📋 DETAIL LENGKAP — ${periodLabel} (${sorted.length} catatan`;
+    if (txCards.length > 0) {
+      header += ` | Masuk: ${fmtRp(totalMasuk)} | Keluar: ${fmtRp(totalKeluar)} | Saldo: ${saldo >= 0 ? '+' : ''}${fmtRp(Math.abs(saldo))}`;
+    }
+    header += '):\n';
+    return header + sorted.map(fmtCard).join('\n');
+  };
+
+  const monthlySummary = buildMonthlySummary(cardsContext);
+  const detailContext = buildDetailContext(cardsContext, userMessage);
 
   const knowledgeSection = sukiKnowledge
     ? `Basis Pengetahuan Tambahan (Katalog Produk & Dokumen Anda):\n${sukiKnowledge}\n\n`
@@ -303,30 +425,31 @@ export async function generateCompanionChat(apiKey, companion, chatHistory, card
   const appKnowledge = `Informasi Aplikasi (Website qodirsAi):
 Aplikasi ini adalah qodirsAi (qodirsganteng.my.id), sebuah dashboard produktivitas premium all-in-one yang canggih dengan Firebase Cloud Auto-Sync. Fitur-fiturnya meliputi:
 - **Beranda (Dashboard)**: Ringkasan harian, kutipan motivasi, tracker kebiasaan, grafik keuangan, tugas mendesak.
-- **Card Cloud Journal (Memex Journal)**: Mencatat jurnal/fragmen harian. Bisa melampirkan berkas (PDF, Gambar, TXT) untuk diekstrak otomatis oleh AI menjadi kartu (Tugas, Transaksi Keuangan, Catatan, Kutipan, Kontak). Ada tab "Pengetahuan Suki" untuk mengunggah katalog laptop/toko Anda agar kamu (Suki) mengetahuinya.
-- **Pelacak Kebiasaan (Habit Tracker)**: Checklist kebiasaan harian, streaks beruntun, grafik keberhasilan, dan gamifikasi koin/XP.
-- **Mega Prompt**: Prompt engineering helper dengan template siap pakai dan variabel dinamis.
-- **Click Counter**: Penghitung klik tasbih digital, counter olahraga, stok barang dengan setingan warna, target, getaran haptic, dan multi-counter.
-- **Penulis Naskah (Content Scripting)**: Penyusun skrip video YouTube/TikTok/Reels dengan Hook, Storyline, Call to Action, dan estimasi waktu baca.
-- **Mega Creator Studio**: Pembuat storyboard video, SEO tags, dan deskripsi naskah.
-- **Perencana Konten (Social Planner)**: Kanban board drag-and-drop media sosial (Ide, Draf, Jadwal, Terbit).
-- **Jadwal Harian (Daily Planner)**: Agenda kalender time-blocking jam-demi-jam.
-- **Vibe Coding Hub (Vibe Generator)**: Generator kode seru, template boilerplate, dan debugging assistant.
-- **Pengaturan (Settings)**: Pengunci PIN layar, penyetelan API Key (Gemini, Groq, OpenAI), dan model default.
-- **Floating Suki Bubble**: Widget chat melayang global dengan input suara (Speech-to-text) di semua halaman (kecuali Memex).
+- **Card Cloud Journal / Neraca**: Mencatat jurnal harian, transaksi keuangan, tugas, catatan, kutipan. Ada tab Neraca 💰 untuk dashboard keuangan lengkap (filter, chart, analitik).
+- **Pelacak Kebiasaan**: Checklist harian, streaks, grafik, koin/XP.
+- **Floating Suki Bubble**: Widget chat melayang global di semua halaman.
 
-Sebagai Suki, kamu harus mengenali fitur-fitur ini dan menjelaskannya dengan asyik dan santai (menggunakan gaya bicara gue-lo) jika ditanya oleh pengunjung.`;
+Sebagai Suki, gunakan gaya bicara gue-lo yang santai dan asyik. Kamu adalah asisten keuangan & produktivitas personal pengguna.`;
 
-  const systemInstructions = `System Prompt Kepribadian:
-${companion.customPrompt}
+  const systemInstructions = `${companion.customPrompt}
 
 ${appKnowledge}
 
-${knowledgeSection}Berikut adalah SELURUH DATABASE kartu/catatan jurnal milik pengguna (tersinkron dari Firebase + lokal). Ini adalah memori penuh kamu — gunakan untuk menjawab pertanyaan apapun tentang pengeluaran, tugas, catatan, kutipan, kontak di tanggal manapun. Total kartu: ${cardsContext.length}:
-${cardsSummary}
+${knowledgeSection}
+━━━ DATABASE MEMORI KAMU ━━━
+Total kartu tersimpan: ${cardsContext.length}
 
-Instruksi Tambahan:
-Jawablah pesan pengguna menggunakan gaya kepribadianmu di atas. Tulis jawaban yang singkat (1-3 kalimat) agar terasa natural seperti bertukar pesan instan/chatting. Jangan terlalu formal! Gunakan gaya bahasa kasual.
+📊 RINGKASAN BULANAN (semua waktu):
+${monthlySummary}
+${detailContext}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Instruksi:
+- Jawab dengan gaya kasual gue-lo, singkat 1-4 kalimat kecuali diminta laporan/neraca lengkap.
+- Kalau diminta neraca/laporan, tampilkan data detail dari DATABASE DI ATAS secara lengkap dan terstruktur dalam format tabel atau list yang rapi.
+- Kamu boleh menghitung total, rata-rata, atau breakdown kategori dari data di atas.
+- Jangan pernah bilang "gue tidak tahu" untuk data yang sudah ada di database di atas.
+
 
 Kemampuan Mencatat (WAJIB):
 Jika dalam pesan pengguna terdeteksi permintaan atau pernyataan berniat mencatat sesuatu (seperti mencatat pengeluaran/pemasukan uang, tugas baru, jadwal, kutipan, kontak orang baru, ide cemerlang, resep masakan, log kesehatan, wishlist, mimpi, dll), maka selain membalas chat secara kasual, kamu WAJIB menyertakan blok XML/JSON berikut di paling bawah jawabanmu untuk dimasukkan ke database. Kamu dibebaskan menggunakan tipe default atau membuat kategori kustom baru (dalam 1 kata lowercase, misal "ide", "resep", "wishlist", "hobi", dll). 
