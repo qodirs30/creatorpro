@@ -140,6 +140,7 @@ export default function MemexJournal() {
 
   // State untuk Google Drive Sync
   const [syncingCloud, setSyncingCloud] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState(localStorage.getItem('memex_last_sync') || null);
 
   // State untuk Suki Knowledge Catalog
   const [knowledgeLoading, setKnowledgeLoading] = useState(false);
@@ -246,9 +247,15 @@ export default function MemexJournal() {
         const merged = mergeData(localData, cloudData);
         restoreBackup(merged);
         await uploadBackupToDatabase(firebaseUser.uid, merged);
+        const nowStr = new Date().toISOString();
+        localStorage.setItem('memex_last_sync', nowStr);
+        setLastSyncTime(nowStr);
         alert('Sinkronisasi cloud berhasil!');
       } else {
         await uploadBackupToDatabase(firebaseUser.uid, localData);
+        const nowStr = new Date().toISOString();
+        localStorage.setItem('memex_last_sync', nowStr);
+        setLastSyncTime(nowStr);
         alert('Data lokal berhasil diunggah ke cloud (karena cloud kosong)!');
       }
     } catch (error) {
@@ -890,14 +897,28 @@ export default function MemexJournal() {
     setIsConfiguring(false);
   };
 
-  // Format tanggal lokalisasi
+  // Format tanggal + jam lokalisasi (handal di semua browser)
   const formatDate = (dateStr) => {
-    return new Date(dateStr).toLocaleDateString('id-ID', {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleString('id-ID', {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // Format jam chat: jam:menit saja jika hari ini, tambahkan tanggal jika bukan hari ini
+  const formatChatTime = (isoStr) => {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    if (sameDay) {
+      return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   };
 
   // Format nominal rupiah
@@ -968,7 +989,7 @@ export default function MemexJournal() {
                     </>
                   ) : (
                     <>
-                      ● Cloud Aktif
+                      ● Cloud Aktif {lastSyncTime ? `(Sync: ${formatDate(lastSyncTime)})` : ''}
                     </>
                   )}
                 </span>
@@ -1415,8 +1436,13 @@ export default function MemexJournal() {
                         </div>
                       )}
 
-                      <div className="memex-card-footer">
-                        <span>{formatDate(card.createdAt)}</span>
+                      <div className="memex-card-footer" style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.25rem', width: '100%' }}>
+                        <span>📅 {formatDate(card.createdAt)}</span>
+                        {card.updatedAt && card.updatedAt !== card.createdAt && (
+                          <span style={{ fontStyle: 'italic', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                            ✏️ Edit: {formatDate(card.updatedAt)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))
@@ -1542,6 +1568,12 @@ export default function MemexJournal() {
                     </button>
                   </div>
 
+                  {/* Timestamp terakhir update Knowledge */}
+                  {sukiKnowledge?.updatedAt && sukiKnowledge.updatedAt !== new Date(0).toISOString() && (
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                      📚 Update: <strong>{formatDate(sukiKnowledge.updatedAt)}</strong>
+                    </span>
+                  )}
                   {/* Action buttons */}
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     {sukiKnowledge?.content && (
@@ -1845,14 +1877,25 @@ export default function MemexJournal() {
                 </div>
               ) : (
                 memexChats.map(chat => (
-                  <div key={chat.id} className={`chat-bubble ${chat.role}`}>
+                  <div
+                    key={chat.id}
+                    className={`chat-bubble ${chat.role}`}
+                    style={{ display: 'flex', flexDirection: 'column' }}
+                  >
                     {chat.role === 'assistant' ? (
-                      <div>
-                        <MarkdownRenderer text={chat.content} />
-                      </div>
+                      <div><MarkdownRenderer text={chat.content} /></div>
                     ) : (
                       <MarkdownRenderer text={chat.content} />
                     )}
+                    <span style={{
+                      fontSize: '0.65rem',
+                      opacity: 0.5,
+                      marginTop: '0.25rem',
+                      alignSelf: chat.role === 'user' ? 'flex-end' : 'flex-start',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {formatChatTime(chat.timestamp)}
+                    </span>
                   </div>
                 ))
               )}
