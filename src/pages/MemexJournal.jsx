@@ -827,12 +827,13 @@ export default function MemexJournal() {
           content: `*[Mengomentari: ${result.title}]* ${result.companionComment || 'Udah gue catat ke jurnal lo ya!'}` 
         });
       } else {
-        const recentCards = memexCards.slice(0, 5);
+        // Kirim SEMUA kartu sebagai konteks database Suki (bukan hanya hari ini)
+        const allCards = memexCards || [];
         const reply = await generateCompanionChat(
           apiKey,
           memexCompanion,
           memexChats.concat({ role: 'user', content: userMsg }),
-          recentCards,
+          allCards,
           userMsg,
           aiProvider,
           aiModel,

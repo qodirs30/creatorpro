@@ -269,17 +269,32 @@ Harus mengembalikan output dalam format JSON MURNI yang valid tanpa teks pembuka
  * Menghasilkan balasan chat dari AI Companion berdasarkan riwayat chat dan memori kartu.
  */
 export async function generateCompanionChat(apiKey, companion, chatHistory, cardsContext, userMessage, provider = 'gemini', model = 'gemini-2.5-flash', sukiKnowledge = '') {
-  const cardsSummary = cardsContext.length > 0 
-    ? cardsContext.map(c => {
-        let details;
-        if (c.type === 'transaction') details = `Transaksi: Rp ${c.data.amount} (${c.data.category}, ${c.data.type})`;
-        else if (c.type === 'task') details = `Tugas: ${c.data.todo} (Tenggat: ${c.data.dueDate || '-'})`;
-        else if (c.type === 'quote') details = `Kutipan: "${c.data.quote}" oleh ${c.data.author}`;
-        else if (c.type === 'contact') details = `Kontak: ${c.data.name} (${c.data.relationship})`;
-        else details = `Catatan: ${c.data.summary}`;
-        return `- [${c.type.toUpperCase()}] ${c.title} (${details})`;
-      }).join('\n')
-    : 'Belum ada kartu aktivitas/jurnal yang dicatat hari ini.';
+  // Buat ringkasan semua kartu dari database, diurutkan terbaru, dengan tanggal
+  const buildCardsSummary = (cards) => {
+    if (!cards || cards.length === 0) return 'Belum ada catatan di database.';
+
+    // Urutkan kartu dari terbaru ke terlama
+    const sorted = [...cards].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+
+    // Batasi ke 100 kartu terbaru agar prompt tidak terlalu besar
+    const limited = sorted.slice(0, 100);
+
+    // Format setiap kartu dengan tanggal pembuatan
+    return limited.map(c => {
+      const dateStr = c.createdAt
+        ? new Date(c.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+        : 'Tanggal tidak diketahui';
+      let details;
+      if (c.type === 'transaction') details = `Transaksi: Rp ${c.data?.amount?.toLocaleString('id-ID') || 0} (${c.data?.category || '-'}, ${c.data?.type || '-'})`;
+      else if (c.type === 'task') details = `Tugas: ${c.data?.todo || '-'} (Tenggat: ${c.data?.dueDate || '-'})`;
+      else if (c.type === 'quote') details = `Kutipan: "${c.data?.quote || '-'}" oleh ${c.data?.author || 'Anonim'}`;
+      else if (c.type === 'contact') details = `Kontak: ${c.data?.name || '-'} (${c.data?.relationship || '-'})`;
+      else details = `Catatan: ${c.data?.summary || '-'}`;
+      return `- [${dateStr}] [${c.type.toUpperCase()}] ${c.title} — ${details}`;
+    }).join('\n');
+  };
+
+  const cardsSummary = buildCardsSummary(cardsContext);
 
   const knowledgeSection = sukiKnowledge
     ? `Basis Pengetahuan Tambahan (Katalog Produk & Dokumen Anda):\n${sukiKnowledge}\n\n`
@@ -307,7 +322,7 @@ ${companion.customPrompt}
 
 ${appKnowledge}
 
-${knowledgeSection}Berikut adalah memori aktivitas/jurnal pengguna hari ini yang kamu ketahui (gunakan ini jika pengguna bertanya tentang apa saja yang sudah dilakukan, uang yang dihabiskan, tugas yang tersisa, dll):
+${knowledgeSection}Berikut adalah SELURUH DATABASE kartu/catatan jurnal milik pengguna (tersinkron dari Firebase + lokal). Ini adalah memori penuh kamu — gunakan untuk menjawab pertanyaan apapun tentang pengeluaran, tugas, catatan, kutipan, kontak di tanggal manapun. Total kartu: ${cardsContext.length}:
 ${cardsSummary}
 
 Instruksi Tambahan:

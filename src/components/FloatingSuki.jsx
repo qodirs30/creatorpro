@@ -201,12 +201,13 @@ export default function FloatingSuki() {
           content: `*[Mengomentari: ${result.title}]* ${result.companionComment || 'Udah gue catat ke jurnal lo ya!'}` 
         });
       } else {
-        const recentCards = memexCards.slice(0, 5);
+        // Kirim SEMUA kartu sebagai konteks database Suki (bukan hanya beberapa terbaru)
+        const allCards = memexCards || [];
         const reply = await generateCompanionChat(
           apiKey,
           memexCompanion,
           memexChats.concat({ role: 'user', content: userMsg }),
-          recentCards,
+          allCards,
           userMsg,
           aiProvider,
           aiModel,
