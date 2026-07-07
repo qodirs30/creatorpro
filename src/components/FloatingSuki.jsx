@@ -33,6 +33,7 @@ export default function FloatingSuki() {
   const [loadingChat, setLoadingChat] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [showAttentionDot, setShowAttentionDot] = useState(false);
+  const isSendingChat = useRef(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileDataUrl, setFileDataUrl] = useState(null);
 
@@ -127,14 +128,20 @@ export default function FloatingSuki() {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendChat(e);
+      handleSendChat();
     }
   };
 
   const handleSendChat = async (e) => {
-    if (e) e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    // Guard: cegah double-send
+    if (isSendingChat.current) return;
+    isSendingChat.current = true;
     const userMsg = chatInput.trim();
-    if ((!userMsg && !selectedFile) || loadingChat) return;
+    if ((!userMsg && !selectedFile) || loadingChat) {
+      isSendingChat.current = false;
+      return;
+    }
 
     const apiKey = getApiKey();
     if (!apiKey) {
@@ -246,6 +253,7 @@ export default function FloatingSuki() {
       });
     } finally {
       setLoadingChat(false);
+      isSendingChat.current = false;
     }
   };
 
@@ -498,7 +506,7 @@ export default function FloatingSuki() {
 
           {/* Chat Input Bar */}
           <form
-            onSubmit={handleSendChat}
+            onSubmit={e => e.preventDefault()}
             style={{
               padding: '0.75rem 1rem',
               background: 'rgba(0, 0, 0, 0.2)',

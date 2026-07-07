@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import useAppStore from '../store/useAppStore';
 import { 
   Sparkles, Trash2, Send, Calendar, DollarSign, 
@@ -752,17 +752,25 @@ export default function MemexJournal() {
     }
   };
 
+  const isSendingChat = useRef(false);
+
   const handleChatKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSendChat(e);
+      handleSendChat();
     }
   };
 
   const handleSendChat = async (e) => {
-    if (e) e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    // Guard: cegah double-send
+    if (isSendingChat.current) return;
+    isSendingChat.current = true;
     const userMsg = chatInput.trim();
-    if ((!userMsg && !chatSelectedFile) || loadingChat) return;
+    if ((!userMsg && !chatSelectedFile) || loadingChat) {
+      isSendingChat.current = false;
+      return;
+    }
 
     if (!apiKey) {
       alert('API Key belum dikonfigurasi! Harap atur API Key Anda di menu Pengaturan.');
@@ -870,6 +878,7 @@ export default function MemexJournal() {
       addMemexChat({ role: 'assistant', content: 'Duh sorry, koneksi AI gue lagi error nih. Coba tanya lagi entar ya!' });
     } finally {
       setLoadingChat(false);
+      isSendingChat.current = false;
     }
   };
 
@@ -1976,7 +1985,7 @@ export default function MemexJournal() {
               </div>
             )}
 
-            <form onSubmit={handleSendChat} className="companion-chat-input" style={{ gap: '0.5rem', display: 'flex', alignItems: 'center' }}>
+            <form onSubmit={e => e.preventDefault()} className="companion-chat-input" style={{ gap: '0.5rem', display: 'flex', alignItems: 'center' }}>
               <button
                 type="button"
                 className="btn btn-secondary"
