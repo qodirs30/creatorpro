@@ -144,8 +144,9 @@ export default function FloatingSuki() {
     }
 
     const apiKey = getApiKey();
-    if (!apiKey) {
+    if (aiProvider !== 'qodirsai' && !apiKey) {
       alert('API Key belum diatur! Harap atur API Key di menu Pengaturan.');
+      isSendingChat.current = false;
       return;
     }
 

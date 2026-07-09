@@ -9,7 +9,7 @@ import {
   sendPasswordResetEmail,
   updateProfile
 } from 'firebase/auth';
-import { getDatabase, ref, set, get } from 'firebase/database';
+import { getDatabase, ref, set, get, remove } from 'firebase/database';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBQ8bWb3Ffl8XFZ47RYwl8Wxkt63xa-3wo",
@@ -111,4 +111,21 @@ export async function downloadBackupFromDatabase(uid) {
     return snapshot.val();
   }
   return null;
+}
+
+// Tambah Push Subscription
+export async function addPushSubscription(uid, subscription) {
+  if (!db) throw new Error('Realtime Database belum diinisialisasi.');
+  // Encode endpoint agar aman sebagai key Firebase (tanpa titik/garis miring)
+  const safeKey = btoa(subscription.endpoint).replace(/=/g, '').replace(/\//g, '_').replace(/\+/g, '-');
+  const subRef = ref(db, `users/${uid}/pushSubscriptions/${safeKey}`);
+  await set(subRef, subscription);
+}
+
+// Hapus Push Subscription
+export async function removePushSubscription(uid, endpoint) {
+  if (!db) throw new Error('Realtime Database belum diinisialisasi.');
+  const safeKey = btoa(endpoint).replace(/=/g, '').replace(/\//g, '_').replace(/\+/g, '-');
+  const subRef = ref(db, `users/${uid}/pushSubscriptions/${safeKey}`);
+  await remove(subRef);
 }

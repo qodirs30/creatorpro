@@ -165,6 +165,19 @@ function AppLayout() {
     }
   }, [navigate]);
 
+  // Register Service Worker for Push Notifications
+  useEffect(() => {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => {
+          console.log('Service Worker registered successfully for Web Push:', reg.scope);
+        })
+        .catch(err => {
+          console.error('Service Worker registration failed:', err);
+        });
+    }
+  }, []);
+
   // Close sidebar when route changes (on mobile)
   useEffect(() => {
     if (location.pathname !== lastPathnameRef.current) {

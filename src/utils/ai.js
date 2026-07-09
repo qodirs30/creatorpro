@@ -1,4 +1,8 @@
 export async function generateContent(apiKeysString, prompt, provider = 'gemini', model = 'gemini-1.5-flash-latest') {
+  if (provider === 'qodirsai') {
+    return await generateQodirsAi(prompt, model);
+  }
+
   if (!apiKeysString) {
     throw new Error('API Key belum diatur. Silakan periksa menu Pengaturan.');
   }
@@ -34,6 +38,24 @@ export async function generateContent(apiKeysString, prompt, provider = 'gemini'
     }
   }
   throw lastError || new Error('Gagal memproses permintaan AI.');
+}
+
+async function generateQodirsAi(prompt, model) {
+  const response = await fetch('/.netlify/functions/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ prompt, model })
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.message || 'Gagal memproses dengan qodirsAi Server Proxy.');
+  }
+
+  const data = await response.json();
+  return data.text;
 }
 
 async function generateGemini(apiKey, prompt, model) {

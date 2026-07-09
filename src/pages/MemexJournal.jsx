@@ -16,7 +16,9 @@ import {
 import { 
   logoutFirebase,
   uploadBackupToDatabase, 
-  downloadBackupFromDatabase 
+  downloadBackupFromDatabase,
+  addPushSubscription,
+  removePushSubscription
 } from '../utils/firebase';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import NeracaDashboard from '../components/NeracaDashboard';
@@ -142,6 +144,8 @@ export default function MemexJournal() {
   // State untuk Google Drive Sync
   const [syncingCloud, setSyncingCloud] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState(localStorage.getItem('memex_last_sync') || null);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationLoading, setNotificationLoading] = useState(false);
 
   // State untuk Suki Knowledge Catalog
   const [knowledgeLoading, setKnowledgeLoading] = useState(false);
@@ -179,6 +183,119 @@ export default function MemexJournal() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTab]);
+
+  // Cek status notifikasi aktif di browser/device ini
+  useEffect(() => {
+    const checkStatus = async () => {
+      if ('serviceWorker' in navigator && 'PushManager' in window && firebaseUser) {
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          const sub = await reg.pushManager.getSubscription();
+          setNotificationsEnabled(!!sub);
+        } catch (e) {
+          console.warn('Gagal membaca push subscription status:', e);
+        }
+      }
+    };
+    checkStatus();
+  }, [firebaseUser]);
+
+  const urlBase64ToUint8Array = (base64String) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
+  const handleToggleNotifications = async () => {
+    if (!firebaseUser) {
+      alert('Harap masuk/login terlebih dahulu untuk mengaktifkan notifikasi.');
+      return;
+    }
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('Perangkat atau browser Anda tidak mendukung Web Push Notifications.');
+      return;
+    }
+
+    setNotificationLoading(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const existingSub = await reg.pushManager.getSubscription();
+
+      if (existingSub) {
+        // Toggle OFF: Unsubscribe
+        await existingSub.unsubscribe();
+        await removePushSubscription(firebaseUser.uid, existingSub.endpoint);
+        setNotificationsEnabled(false);
+        alert('Notifikasi Pengingat Suki dinonaktifkan.');
+      } else {
+        // Toggle ON: Subscribe
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+          alert('Izin notifikasi ditolak. Silakan aktifkan izin notifikasi di pengaturan browser Anda.');
+          setNotificationLoading(false);
+          return;
+        }
+
+        const publicVapidKey = 'BM9MIyqrEyZE14pDk4Jw3kicLqKhJARFkWjyDFlatpqdjU9zDcXzJEM4qaD86FsjXI7E9l3ltGlri_CtmBEaDiU';
+        const convertedKey = urlBase64ToUint8Array(publicVapidKey);
+
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedKey
+        });
+
+        // Simpan ke Firebase DB
+        await addPushSubscription(firebaseUser.uid, sub.toJSON());
+        setNotificationsEnabled(true);
+        alert('Notifikasi Pengingat Suki aktif untuk perangkat ini! 🎉');
+      }
+    } catch (err) {
+      console.error('Gagal memproses toggle notifikasi:', err);
+      alert('Gagal mengaktifkan notifikasi: ' + err.message);
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
+  const handleSendTestNotification = async () => {
+    if (!firebaseUser) return;
+    setNotificationLoading(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        alert('Aktifkan notifikasi terlebih dahulu sebelum melakukan tes.');
+        setNotificationLoading(false);
+        return;
+      }
+
+      const response = await fetch('/.netlify/functions/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subscription: sub.toJSON(),
+          title: `🦊 ${memexCompanion.name}`,
+          message: `Oi! Ini tes notifikasi langsung dari ${memexCompanion.name}. Koneksi Web Push lo udah jalan lancar jaya! 👍`
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.message || 'Gagal mengirim push.');
+      }
+      alert('Tes notifikasi berhasil dikirim! Silakan periksa layar perangkat Anda.');
+    } catch (err) {
+      console.error('Gagal mengirim tes notifikasi:', err);
+      alert('Gagal mengirim tes notifikasi: ' + err.message);
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
 
   // Helper to merge data by ID with timestamp conflict resolution
   const mergeData = (local, cloud) => {
@@ -417,7 +534,7 @@ export default function MemexJournal() {
     e.preventDefault();
     if ((!textCapture.trim() && !selectedFile) || loadingCapture) return;
 
-    if (!apiKey) {
+    if (aiProvider !== 'qodirsai' && !apiKey) {
       alert('API Key belum dikonfigurasi! Harap atur API Key Anda di menu Pengaturan.');
       return;
     }
@@ -772,8 +889,9 @@ export default function MemexJournal() {
       return;
     }
 
-    if (!apiKey) {
+    if (aiProvider !== 'qodirsai' && !apiKey) {
       alert('API Key belum dikonfigurasi! Harap atur API Key Anda di menu Pengaturan.');
+      isSendingChat.current = false;
       return;
     }
 
@@ -1859,6 +1977,52 @@ export default function MemexJournal() {
                     rows={3}
                     style={{ padding: '0.5rem', fontSize: '0.85rem', resize: 'vertical', fontFamily: 'inherit' }}
                   />
+                </div>
+                {/* Push Notification Toggle Section */}
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', margin: 0 }}>
+                    <span>🔔 Notifikasi Pengingat {compName}</span>
+                    <input 
+                      type="checkbox" 
+                      checked={notificationsEnabled} 
+                      onChange={handleToggleNotifications}
+                      disabled={notificationLoading}
+                      style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                    />
+                  </label>
+                  <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', margin: '0.25rem 0 0 0', lineHeight: 1.3 }}>
+                    Asisten akan mengirim notifikasi ke perangkat ini untuk mengingatkan tugas hari ini & kebiasaan wajib secara berkala.
+                  </p>
+                  
+                  {notificationsEnabled && (
+                    <button 
+                      type="button" 
+                      onClick={handleSendTestNotification} 
+                      disabled={notificationLoading}
+                      style={{ 
+                        marginTop: '0.5rem', 
+                        padding: '0.25rem 0.5rem', 
+                        fontSize: '0.7rem', 
+                        borderRadius: '4px',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        color: 'var(--text-primary)',
+                        border: '1px solid var(--border-color)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}
+                    >
+                      🧪 Kirim Tes Notifikasi
+                    </button>
+                  )}
+
+                  {/* Deteksi iOS / Safari Tip */}
+                  {typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && (
+                    <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '0.5rem', borderRadius: '6px', marginTop: '0.5rem', fontSize: '0.72rem', color: '#f59e0b', lineHeight: '1.3' }}>
+                      <strong>📱 Tips Safari/iOS:</strong> Notifikasi memerlukan web app terinstal. Ketuk ikon <strong>Share</strong> di Safari lalu pilih <strong>"Add to Home Screen"</strong> untuk mengaktifkannya.
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>

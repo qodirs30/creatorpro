@@ -140,6 +140,14 @@ export default function Settings() {
   };
 
   const textProviders = {
+    qodirsai: {
+      name: 'qodirsAi Proxy',
+      tag: 'Gratis & Tanpa API Key (Rekomendasi)',
+      models: [
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Default)' },
+        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' }
+      ]
+    },
     gemini: {
       name: 'Google Gemini',
       tag: 'Gratis / Berbayar',
