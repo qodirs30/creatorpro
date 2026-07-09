@@ -160,9 +160,16 @@ export default function DailyPlanner() {
                       onChange={() => toggleTask(task.id, isCompleted, task.data?.todo || task.title)}
                       style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                     />
-                    <span style={{ textDecoration: isCompleted ? 'line-through' : 'none' }}>
-                      {task.data?.todo || task.title}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <span style={{ textDecoration: isCompleted ? 'line-through' : 'none', fontWeight: '500' }}>
+                        {task.data?.todo || task.title}
+                      </span>
+                      {task.data?.dueTime && (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--danger)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          ⏰ Pengingat: pukul {task.data.dueTime}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })

@@ -522,7 +522,7 @@ Jika pengguna meminta mencatat beberapa hal sekaligus, kamu BISA menyertakan beb
   "title": "Judul singkat kartu representatif (maksimal 5 kata)",
   "tags": ["tag1", "tag2"],
   "data": { 
-    // Jika "task": { "todo": "deskripsi tugas", "dueDate": "tanggal YYYY-MM-DD (jika ada)" }
+    // Jika "task": { "todo": "deskripsi tugas", "dueDate": "tanggal YYYY-MM-DD (jika ada)", "dueTime": "waktu HH:MM dalam format 24 jam (jika ada pengingat spesifik, misal 'jam 19:12' -> '19:12')" }
     // Jika "transaction": { "amount": nominal uang murni (integer), "category": "makanan/transportasi/kopi/lainnya", "type": "expense" atau "income" }
     // Jika "quote": { "quote": "teks kutipan", "author": "penulis (default: Anonim)" }
     // Jika "contact": { "name": "nama orang", "relationship": "rekan/teman/keluarga/klien", "context": "catatan pertemuan" }

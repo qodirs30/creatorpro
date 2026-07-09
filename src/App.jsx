@@ -152,7 +152,7 @@ function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { firebaseUser } = useAppStore();
+  const { firebaseUser, memexCards, updateMemexCard } = useAppStore();
   const lastStateRef = useRef();
   const lastPathnameRef = useRef(location.pathname);
 
@@ -177,6 +177,59 @@ function AppLayout() {
         });
     }
   }, []);
+
+  // Real-time task alarm/reminder scheduler
+  useEffect(() => {
+    const checkReminders = () => {
+      const now = new Date();
+      // Format YYYY-MM-DD local time
+      const todayStr = now.toLocaleDateString('en-CA');
+      // Format HH:MM 24 jam local time
+      const hour = String(now.getHours()).padStart(2, '0');
+      const minute = String(now.getMinutes()).padStart(2, '0');
+      const currentTimeStr = `${hour}:${minute}`;
+
+      (memexCards || []).forEach(card => {
+        if (
+          card.type === 'task' &&
+          !card.data?.completed &&
+          !card.data?.notified &&
+          (card.data?.dueDate === todayStr || (!card.data?.dueDate && new Date(card.createdAt).toDateString() === now.toDateString())) &&
+          card.data?.dueTime === currentTimeStr
+        ) {
+          // Tandai kartu sebagai sudah dikirimi notifikasi agar tidak berulang
+          updateMemexCard(card.id, {
+            data: { ...card.data, notified: true }
+          });
+
+          // Tampilkan notifikasi
+          const title = `Reminder: ${card.title || 'Tugas'}`;
+          const options = {
+            body: card.data?.todo || 'Saatnya menyelesaikan tugas Anda!',
+            icon: '/logo.svg',
+            badge: '/favicon.svg',
+            tag: card.id,
+            requireInteraction: true
+          };
+
+          // Tampilkan notifikasi menggunakan Service Worker jika terdaftar, atau fallback
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(registration => {
+              registration.showNotification(title, options);
+            });
+          } else if (Notification.permission === 'granted') {
+            new Notification(title, options);
+          } else {
+            console.log('Notification permission not granted or SW not ready.');
+          }
+        }
+      });
+    };
+
+    // Jalankan pemeriksaan setiap 15 detik
+    const intervalId = setInterval(checkReminders, 15000);
+    return () => clearInterval(intervalId);
+  }, [memexCards, updateMemexCard]);
 
   // Close sidebar when route changes (on mobile)
   useEffect(() => {

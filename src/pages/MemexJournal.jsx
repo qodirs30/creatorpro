@@ -1539,7 +1539,7 @@ export default function MemexJournal() {
                             </p>
                             {card.data.dueDate && (
                               <p style={{ margin: '0.25rem 0 0 1.25rem', fontSize: '0.8rem', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                <Calendar size={12} /> Tenggat: {card.data.dueDate}
+                                <Calendar size={12} /> Tenggat: {card.data.dueDate}{card.data.dueTime ? ` pukul ${card.data.dueTime}` : ''}
                               </p>
                             )}
                           </div>
