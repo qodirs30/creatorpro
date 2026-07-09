@@ -533,8 +533,18 @@ Jika pengguna meminta mencatat beberapa hal sekaligus, kamu BISA menyertakan beb
 
 Jika pengguna tidak berniat mencatat apa-apa, cukup balas chat biasa tanpa tag <record_card>.`;
 
+  // Bersihkan chatHistory dari pesan user terakhir jika sudah sama dengan userMessage (mencegah double prompt)
+  const historyToRender = [...(chatHistory || [])];
+  if (
+    historyToRender.length > 0 && 
+    historyToRender[historyToRender.length - 1].content === userMessage && 
+    historyToRender[historyToRender.length - 1].role === 'user'
+  ) {
+    historyToRender.pop();
+  }
+
   // Batasi riwayat chat hanya 8 pesan terakhir agar prompt tidak terlalu panjang dan AI merespon lebih cepat
-  const recentHistory = chatHistory.slice(-8);
+  const recentHistory = historyToRender.slice(-8);
 
   // Gabungkan instruksi dengan pesan pengguna terbaru
   const fullPrompt = `${systemInstructions}\n\nRiwayat Obrolan:\n${recentHistory.map(h => `${h.role === 'user' ? 'User' : 'Companion'}: ${h.content}`).join('\n')}\nUser: ${userMessage}\nCompanion:`;
