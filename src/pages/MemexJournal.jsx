@@ -1985,7 +1985,7 @@ export default function MemexJournal() {
               </div>
             )}
 
-            <form onSubmit={e => e.preventDefault()} className="companion-chat-input" style={{ gap: '0.5rem', display: 'flex', alignItems: 'center' }}>
+            <form onSubmit={handleSendChat} className="companion-chat-input" style={{ gap: '0.5rem', display: 'flex', alignItems: 'center' }}>
               <button
                 type="button"
                 className="btn btn-secondary"

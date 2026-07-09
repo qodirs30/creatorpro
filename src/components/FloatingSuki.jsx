@@ -506,7 +506,7 @@ export default function FloatingSuki() {
 
           {/* Chat Input Bar */}
           <form
-            onSubmit={e => e.preventDefault()}
+            onSubmit={handleSendChat}
             style={{
               padding: '0.75rem 1rem',
               background: 'rgba(0, 0, 0, 0.2)',
