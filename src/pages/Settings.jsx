@@ -39,6 +39,8 @@ export default function Settings() {
   const [localEnablePinLock, setLocalEnablePinLock] = useState(enablePinLock);
   const [localPin, setLocalPin] = useState(pin);
   const [saved, setSaved] = useState(false);
+  const [proxyTesting, setProxyTesting] = useState(false);
+  const [proxyStatus, setProxyStatus] = useState('');
 
   // State Profil Firebase
   const [profileName, setProfileName] = useState(firebaseUser?.displayName || '');
@@ -311,6 +313,32 @@ export default function Settings() {
     
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleTestProxy = async () => {
+    setProxyTesting(true);
+    setProxyStatus('Menghubungkan ke Proxy...');
+    try {
+      const startTime = performance.now();
+      const response = await fetch('/.netlify/functions/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: 'Say: Proxy Active', model: 'gemini-1.5-flash-latest' })
+      });
+      const latency = Math.round(performance.now() - startTime);
+
+      if (response.ok) {
+        const data = await response.json();
+        setProxyStatus(`Sukses! Latency: ${latency}ms`);
+      } else {
+        const err = await response.json().catch(() => ({}));
+        setProxyStatus(`Gagal: ${err.message || 'HTTP ' + response.status}`);
+      }
+    } catch (err) {
+      setProxyStatus(`Gagal terhubung: ${err.message}`);
+    } finally {
+      setProxyTesting(false);
+    }
   };
 
   const renderKeySection = (provider, title, keysList, helpText, getUrl) => {
@@ -650,6 +678,18 @@ export default function Settings() {
               <option key={model.id} value={model.id}>{model.name}</option>
             ))}
           </select>
+          {localProvider === 'qodirsai' && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleTestProxy}
+              disabled={proxyTesting}
+              style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', width: 'auto' }}
+            >
+              <RefreshCw size={14} className={proxyTesting ? 'animate-spin' : ''} />
+              {proxyStatus || 'Tes Koneksi Proxy'}
+            </button>
+          )}
         </div>
       </div>
       {/* ===================== KARTU EKSPOR & IMPOR DATA ===================== */}

@@ -106,7 +106,7 @@ export default function MemexJournal() {
     aiProvider, aiModel,
     firebaseUser, isAuthActive, restoreBackup,
     habits, scripts, socialPosts, counters, activityLog, history,
-    sukiKnowledge, setSukiKnowledge, addHistory
+    sukiKnowledge, setSukiKnowledge, addHistory, logActivity, removeActivityLog
   } = useAppStore();
 
   const [textCapture, setTextCapture] = useState('');
@@ -457,7 +457,7 @@ export default function MemexJournal() {
     }
   };
 
-  const chatEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   // Dapatkan API key yang aktif
   const getApiKey = () => {
@@ -469,9 +469,11 @@ export default function MemexJournal() {
 
   const apiKey = getApiKey();
 
-  // Scroll otomatis ke chat terakhir
+  // Scroll otomatis ke chat terakhir (hanya scroll container chat untuk mencegah jank/layar melompat)
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
   }, [memexChats, loadingChat]);
 
   // Handler Pemrosesan File
@@ -964,7 +966,9 @@ export default function MemexJournal() {
           userMsg,
           aiProvider,
           aiModel,
-          sukiKnowledge?.content || ''
+          sukiKnowledge?.content || '',
+          habits,
+          activityLog
         );
 
         let cleanReply = reply.trim();
@@ -1513,10 +1517,25 @@ export default function MemexJournal() {
                         )}
 
                         {card.type === 'task' && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', backgroundColor: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '0.5rem' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', backgroundColor: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '0.5rem', opacity: card.data?.completed ? 0.6 : 1 }}>
                             <p style={{ margin: 0, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                              <input type="checkbox" readOnly checked={false} style={{ cursor: 'not-allowed' }} />
-                              <span>{card.data.todo}</span>
+                              <input 
+                                type="checkbox" 
+                                checked={!!card.data?.completed} 
+                                onChange={() => {
+                                  const isNowDone = !card.data?.completed;
+                                  updateMemexCard(card.id, {
+                                    data: { ...card.data, completed: isNowDone }
+                                  });
+                                  if (isNowDone) {
+                                    logActivity({ id: card.id, type: 'task', title: card.data?.todo || card.title });
+                                  } else {
+                                    removeActivityLog(card.id, 'task');
+                                  }
+                                }}
+                                style={{ cursor: 'pointer', width: '16px', height: '16px' }} 
+                              />
+                              <span style={{ textDecoration: card.data?.completed ? 'line-through' : 'none' }}>{card.data.todo}</span>
                             </p>
                             {card.data.dueDate && (
                               <p style={{ margin: '0.25rem 0 0 1.25rem', fontSize: '0.8rem', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
@@ -2059,7 +2078,7 @@ export default function MemexJournal() {
             </div>
 
             {/* Gelembung Pesan */}
-            <div className="companion-chat-messages">
+            <div ref={chatContainerRef} className="companion-chat-messages">
               {memexChats.length === 0 ? (
                 <div style={{ margin: 'auto', textAlign: 'center', padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
                   <span>Mulailah menyapa {memexCompanion.name}! Dia ingat jurnal harianmu di sebelah kiri.</span>
@@ -2097,7 +2116,6 @@ export default function MemexJournal() {
                   <div className="pulsing-dot"></div>
                 </div>
               )}
-              <div ref={chatEndRef} />
             </div>
 
             {/* Input Form Chat */}

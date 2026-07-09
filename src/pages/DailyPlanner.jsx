@@ -1,11 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Play, Square, Timer } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 
 export default function DailyPlanner() {
-  const [tasks, setTasks] = useState([]);
+  const { 
+    memexCards, 
+    addMemexCard, 
+    updateMemexCard, 
+    logActivity, 
+    removeActivityLog 
+  } = useAppStore();
+
   const [newTask, setNewTask] = useState('');
-  const { logActivity, removeActivityLog } = useAppStore();
   
   // Pomodoro State
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -18,7 +24,6 @@ export default function DailyPlanner() {
         setTimeLeft(time => time - 1);
       }, 1000);
     } else if (timeLeft === 0 && isActive) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsActive(false);
       alert('Sesi Pomodoro selesai! Istirahatlah 5 menit.');
     }
@@ -37,26 +42,57 @@ export default function DailyPlanner() {
     return `${m}:${s}`;
   };
 
+  // Mendapatkan tanggal hari ini format YYYY-MM-DD local time
+  const todayStr = useMemo(() => {
+    return new Date().toLocaleDateString('en-CA');
+  }, []);
+
+  // Filter tugas hari ini dari memexCards
+  const todayTasks = useMemo(() => {
+    return (memexCards || []).filter(c => 
+      c.type === 'task' && 
+      (c.data?.dueDate === todayStr || (!c.data?.dueDate && new Date(c.createdAt).toDateString() === new Date().toDateString()))
+    );
+  }, [memexCards, todayStr]);
+
   const handleAddTask = (e) => {
     e.preventDefault();
     if (!newTask.trim()) return;
-    setTasks([...tasks, { id: Date.now().toString(), text: newTask, done: false }]);
+    
+    // Tambahkan tugas ke memexCards (Database tersinkronisasi)
+    addMemexCard({
+      type: 'task',
+      title: newTask.substring(0, 25), // Gunakan potongan teks sebagai judul
+      tags: ['daily-planner'],
+      data: {
+        todo: newTask,
+        dueDate: todayStr,
+        completed: false
+      }
+    });
+
     setNewTask('');
   };
 
-  const toggleTask = (id, text) => {
-    setTasks(tasks.map(t => {
-      if (t.id === id) {
-        const isNowDone = !t.done;
-        if (isNowDone) {
-          logActivity({ id: t.id, type: 'task', title: text });
-        } else {
-          removeActivityLog(t.id, 'task');
-        }
-        return { ...t, done: isNowDone };
+  const toggleTask = (id, currentDone, text) => {
+    const isNowDone = !currentDone;
+    const card = memexCards.find(c => c.id === id);
+    if (!card) return;
+
+    // Update status completed di memexCards
+    updateMemexCard(id, {
+      data: {
+        ...card.data,
+        completed: isNowDone
       }
-      return t;
-    }));
+    });
+
+    // Catat/hapus log aktivitas harian
+    if (isNowDone) {
+      logActivity({ id, type: 'task', title: text });
+    } else {
+      removeActivityLog(id, 'task');
+    }
   };
 
   return (
@@ -100,33 +136,36 @@ export default function DailyPlanner() {
           </form>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
-            {tasks.length === 0 ? (
+            {todayTasks.length === 0 ? (
               <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '1rem 0' }}>Jadwal Anda kosong.</p>
             ) : (
-              tasks.map(task => (
-                <div 
-                  key={task.id}
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '0.75rem',
-                    padding: '0.75rem',
-                    backgroundColor: 'var(--bg-main)',
-                    borderRadius: '8px',
-                    opacity: task.done ? 0.6 : 1
-                  }}
-                >
-                  <input 
-                    type="checkbox" 
-                    checked={task.done} 
-                    onChange={() => toggleTask(task.id, task.text)}
-                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                  />
-                  <span style={{ textDecoration: task.done ? 'line-through' : 'none' }}>
-                    {task.text}
-                  </span>
-                </div>
-              ))
+              todayTasks.map(task => {
+                const isCompleted = !!task.data?.completed;
+                return (
+                  <div 
+                    key={task.id}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.75rem',
+                      padding: '0.75rem',
+                      backgroundColor: 'var(--bg-main)',
+                      borderRadius: '8px',
+                      opacity: isCompleted ? 0.6 : 1
+                    }}
+                  >
+                    <input 
+                      type="checkbox" 
+                      checked={isCompleted} 
+                      onChange={() => toggleTask(task.id, isCompleted, task.data?.todo || task.title)}
+                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                    />
+                    <span style={{ textDecoration: isCompleted ? 'line-through' : 'none' }}>
+                      {task.data?.todo || task.title}
+                    </span>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

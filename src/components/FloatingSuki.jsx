@@ -18,7 +18,8 @@ export default function FloatingSuki() {
     memexChats, addMemexChat, clearMemexChats,
     memexCompanion, sukiKnowledge, memexCards,
     geminiKey, groqKey, openAiKey,
-    aiProvider, aiModel, addMemexCard
+    aiProvider, aiModel, addMemexCard,
+    habits, activityLog
   } = useAppStore();
 
   const getApiKey = () => {
@@ -37,16 +38,14 @@ export default function FloatingSuki() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileDataUrl, setFileDataUrl] = useState(null);
 
-  const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
 
-
-
-  // Scroll to bottom on updates
+  // Scroll to bottom on updates (hanya scroll container chat untuk mencegah jank/layar melompat)
   useEffect(() => {
-    if (isOpen) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isOpen && chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [memexChats, isOpen]);
 
@@ -219,7 +218,9 @@ export default function FloatingSuki() {
           userMsg,
           aiProvider,
           aiModel,
-          sukiKnowledge?.content || ''
+          sukiKnowledge?.content || '',
+          habits,
+          activityLog
         );
 
         let cleanReply = reply.trim();
@@ -393,6 +394,7 @@ export default function FloatingSuki() {
 
           {/* Chat Messages Area */}
           <div
+            ref={chatContainerRef}
             style={{
               flex: 1,
               overflowY: 'auto',
@@ -453,8 +455,6 @@ export default function FloatingSuki() {
                 </div>
               </div>
             )}
-
-            <div ref={messagesEndRef} />
           </div>
 
           {/* Hidden File Input */}

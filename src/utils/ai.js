@@ -290,7 +290,7 @@ Harus mengembalikan output dalam format JSON MURNI yang valid tanpa teks pembuka
 /**
  * Menghasilkan balasan chat dari AI Companion berdasarkan riwayat chat dan memori kartu.
  */
-export async function generateCompanionChat(apiKey, companion, chatHistory, cardsContext, userMessage, provider = 'gemini', model = 'gemini-2.5-flash', sukiKnowledge = '') {
+export async function generateCompanionChat(apiKey, companion, chatHistory, cardsContext, userMessage, provider = 'gemini', model = 'gemini-2.5-flash', sukiKnowledge = '', habitsContext = [], activityLogContext = []) {
   // ─── Helper: Format rupiah compact ───────────────────────────────────────
   const fmtRp = (n) => {
     if (!n) return 'Rp 0';
@@ -453,9 +453,40 @@ Aplikasi ini adalah qodirsAi (qodirsganteng.my.id), sebuah dashboard produktivit
 
 Sebagai Suki, gunakan gaya bicara gue-lo yang santai dan asyik. Kamu adalah asisten keuangan & produktivitas personal pengguna.`;
 
+  const buildHabitsContext = (habits) => {
+    if (!habits || habits.length === 0) return '  • Tidak ada pelacak kebiasaan yang aktif.';
+    return habits.map(h => `  • [${h.completedToday ? '✅ SELESAI' : '❌ BELUM'}] ${h.title} (Streak: ${h.streak || 0} hari${h.isMandatory ? ', Wajib' : ''})`).join('\n');
+  };
+
+  const buildActivityLogContext = (logs) => {
+    if (!logs || logs.length === 0) return '  • Belum ada catatan aktivitas hari ini.';
+    // Ambil 15 aktivitas terbaru
+    const sortedLogs = [...logs].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 15);
+    return sortedLogs.map(l => {
+      const time = l.date ? new Date(l.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '';
+      return `  • [${time}] [${l.type === 'habit' ? 'Kebiasaan' : 'Tugas'}] ${l.title} diselesaikan`;
+    }).join('\n');
+  };
+
+  const localTimeStr = new Date().toLocaleString('id-ID', { 
+    weekday: 'long', 
+    day: '2-digit', 
+    month: 'long', 
+    year: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit',
+    timeZoneName: 'short'
+  });
+
+  const habitsContextStr = buildHabitsContext(habitsContext);
+  const activityLogContextStr = buildActivityLogContext(activityLogContext);
+
   const systemInstructions = `${companion.customPrompt}
 
 ${appKnowledge}
+
+WAKTU & TANGGAL SAAT INI (Local Time Pengguna):
+${localTimeStr}
 
 ${knowledgeSection}
 ━━━ DATABASE MEMORI KAMU ━━━
@@ -464,6 +495,12 @@ Total kartu tersimpan: ${cardsContext.length}
 📊 RINGKASAN BULANAN (semua waktu):
 ${monthlySummary}
 ${detailContext}
+
+🏃 STATUS KEBIASAAN HARI INI:
+${habitsContextStr}
+
+⚡ LOG AKTIVITAS TERBARU HARI INI:
+${activityLogContextStr}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Instruksi:
