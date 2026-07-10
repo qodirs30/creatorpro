@@ -1,17 +1,19 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import useAppStore from '../store/useAppStore';
 import { generateContent } from '../utils/ai';
 import { 
   Terminal, Code, Clipboard, Download, Play, RefreshCw, Zap, 
-  ShieldAlert, Sparkles, Paintbrush, FileText, CheckCircle2
+  ShieldAlert, Sparkles, Paintbrush, FileText, CheckCircle2,
+  MessageSquare, Send
 } from 'lucide-react';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 export default function VibeCoder() {
   const { geminiKey, groqKey, openAiKey, aiProvider, aiModel, addHistory } = useAppStore();
 
   // Tabs
-  const [activeTab, setActiveTab] = useState('pedoman'); // 'pedoman' | 'token-killer' | 'inspector'
+  const [activeTab, setActiveTab] = useState('pedoman'); // 'pedoman' | 'token-killer' | 'inspector' | 'mentor'
 
   // Tab 1: Pedoman Proyek State
   const [theme, setTheme] = useState('Toko Kopi Online');
@@ -43,6 +45,121 @@ export default function VibeCoder() {
   const [inspectorResult, setInspectorResult] = useState('');
   const [inspectorError, setInspectorError] = useState('');
   const [isProxyFailed, setIsProxyFailed] = useState(false);
+
+  // Tab 4: AI Vibe Code Mentor State
+  const [mentorPrompt, setMentorPrompt] = useState('');
+  const [mentorChats, setMentorChats] = useState([]);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [improvedPrompt, setImprovedPrompt] = useState('');
+  const [mentorError, setMentorError] = useState('');
+  const [mentorChatInput, setMentorChatInput] = useState('');
+  const [isSendingChat, setIsSendingChat] = useState(false);
+
+  const mentorChatEndRef = useRef(null);
+
+  // Auto-scroll ke bawah saat diskusi baru masuk
+  useEffect(() => {
+    if (mentorChatEndRef.current) {
+      mentorChatEndRef.current.scrollTop = mentorChatEndRef.current.scrollHeight;
+    }
+  }, [mentorChats, isSendingChat]);
+
+  const mentorSystemPrompt = `Kamu adalah 'AI Vibe Code Mentor', seorang pakar rekayasa prompt (prompt engineer) tingkat tinggi dan arsitek frontend yang sangat berpengalaman. Tugas utamanya adalah mereview, menganalisis, mengkritik, dan menyempurnakan prompt pemrograman yang ingin dikirimkan pengguna ke AI coding (seperti Cursor, Copilot, Gemini, ChatGPT, v0, dll.) agar menghasilkan output kode berkualitas tinggi, anti-slop, clean, terstruktur, responsif, dan premium.
+
+Saat mereview prompt pengguna, lakukan hal berikut secara cermat:
+1. **Analisis Kekurangan**: Kritik prompt pengguna secara objektif (apakah kurang detail, tidak ada batasan teknologi, tidak memiliki instruksi visual/desain, atau berpotensi membuat AI malas/ngasal).
+2. **Berikan 'Polesan Emas' (Improved Prompt)**: Buat rancangan prompt baru yang siap pakai (copy-paste) menggunakan teknik penulisan prompt modern (Roleplay, Context, Constraints, Step-by-Step, Output Format, anti-slop guidelines).
+3. **Tips & Trik Tambahan**: Berikan instruksi tambahan yang penting, misalnya font pairing, shadow premium, transisi smooth, atau teknik grid.
+
+Gunakan format keluaran Markdown yang rapi dengan struktur berikut:
+---
+### 🔍 HASIL REVIEW MENTOR:
+[Tulis analisis singkat kekurangan & saran peningkatan dalam bentuk poin-poin]
+
+### ✨ PROMPT YANG DISEMPURNAKAN (SIAP COPY):
+\`\`\`text
+[Tulis prompt baru yang sangat detail, clean, terstruktur, siap disalin di sini]
+\`\`\`
+
+### 💡 TIPS EKSTRA DARI MENTOR:
+[Berikan 2-3 tips tambahan terkait desain atau coding best practices]
+---
+
+Tulis dengan gaya kasual profesional, suportif, dan edukatif dalam Bahasa Indonesia.`;
+
+  const handleReviewPrompt = async (e) => {
+    if (e) e.preventDefault();
+    if (!mentorPrompt.trim()) return;
+
+    setIsReviewing(true);
+    setMentorError('');
+    setImprovedPrompt('');
+
+    const apiKey = getApiKey();
+    if (aiProvider !== 'qodirsai' && !apiKey) {
+      setMentorError('API Key belum dikonfigurasi! Harap atur API Key Anda di menu Pengaturan.');
+      setIsReviewing(false);
+      return;
+    }
+
+    try {
+      const systemPrompt = `${mentorSystemPrompt}\n\nPrompt asli pengguna yang ingin direview:\n"""\n${mentorPrompt}\n"""`;
+      const response = await generateContent(apiKey, systemPrompt, aiProvider, aiModel);
+      
+      setImprovedPrompt(response);
+      
+      // Reset chat diskusi dan masukkan review pertama sebagai balasan pembuka mentor
+      setMentorChats([
+        { role: 'user', content: `Tolong review prompt ini:\n\n${mentorPrompt}` },
+        { role: 'assistant', content: response }
+      ]);
+
+      // Tambahkan ke riwayat aktivitas
+      addHistory({
+        type: 'prompt-review',
+        category: 'Vibe Code Mentor',
+        title: `Review Prompt: ${mentorPrompt.substring(0, 30)}...`,
+        content: response.slice(0, 500) + '...',
+        meta: { originalPrompt: mentorPrompt }
+      });
+    } catch (err) {
+      setMentorError(err.message || 'Gagal mereview prompt.');
+    } finally {
+      setIsReviewing(false);
+    }
+  };
+
+  const handleSendMentorChat = async (e) => {
+    if (e) e.preventDefault();
+    if (!mentorChatInput.trim() || isSendingChat) return;
+
+    const userMsg = mentorChatInput.trim();
+    setMentorChatInput('');
+    setIsSendingChat(true);
+
+    const updatedChats = [...mentorChats, { role: 'user', content: userMsg }];
+    setMentorChats(updatedChats);
+
+    const apiKey = getApiKey();
+    if (aiProvider !== 'qodirsai' && !apiKey) {
+      setMentorChats(prev => [...prev, { role: 'assistant', content: 'Koneksi error: API Key belum diatur.' }]);
+      setIsSendingChat(false);
+      return;
+    }
+
+    try {
+      // Susun prompt percakapan diskusi
+      const chatHistoryText = updatedChats.map(c => `${c.role === 'user' ? 'User' : 'Mentor'}: ${c.content}`).join('\n');
+      const prompt = `${mentorSystemPrompt}\n\nPrompt Asli Pengguna:\n"""\n${mentorPrompt}\n"""\n\nDiskusi Tanya Jawab:\n${chatHistoryText}\nMentor:`;
+
+      const response = await generateContent(apiKey, prompt, aiProvider, aiModel);
+      setMentorChats(prev => [...prev, { role: 'assistant', content: response }]);
+    } catch (err) {
+      setMentorChats(prev => [...prev, { role: 'assistant', content: `Error: ${err.message || 'Gagal mendapatkan balasan mentor.'}` }]);
+    } finally {
+      setIsSendingChat(false);
+    }
+  };
 
   const getApiKey = () => {
     if (aiProvider === 'gemini') return geminiKey;
@@ -1495,6 +1612,20 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
         >
           <Terminal size={16} /> Token Killer (Log Compressor)
         </button>
+        <button
+          onClick={() => setActiveTab('mentor')}
+          className="btn"
+          style={{
+            background: activeTab === 'mentor' ? 'var(--bg-card)' : 'transparent',
+            color: activeTab === 'mentor' ? 'var(--primary)' : 'var(--text-secondary)',
+            boxShadow: activeTab === 'mentor' ? 'var(--shadow-sm)' : 'none',
+            borderRadius: '8px',
+            padding: '0.6rem 1.25rem',
+            flexShrink: 0
+          }}
+        >
+          <MessageSquare size={16} /> AI Vibe Code Mentor
+        </button>
       </div>
 
       {/* ===================== TAB 1: PEDOMAN PROYEK ===================== */}
@@ -2067,6 +2198,183 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ===================== TAB 4: AI VIBE CODE MENTOR ===================== */}
+      {activeTab === 'mentor' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem', alignItems: 'start', animation: 'slideUpFade 0.3s ease-out forwards' }}>
+          {/* Kolom Kiri: Input Prompt & Hasil Poles */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="card" style={{ borderTop: '4px solid var(--primary)' }}>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Sparkles size={18} color="var(--primary)" /> Poles Prompt Coding Anda
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+                Tulis prompt mentah yang ingin Anda kirim ke AI coding (Cursor/Copilot/v0). Mentor akan melengkapi instruksi visual, design guidelines, dan aturan anti-slop.
+              </p>
+
+              <form onSubmit={handleReviewPrompt} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <textarea
+                  className="input-field"
+                  placeholder="Contoh: Buat halaman dashboard admin responsive dengan dark mode..."
+                  value={mentorPrompt}
+                  onChange={(e) => setMentorPrompt(e.target.value)}
+                  style={{ minHeight: '150px', fontFamily: 'inherit', resize: 'vertical' }}
+                  required
+                />
+                
+                {mentorError && (
+                  <div style={{ color: 'var(--danger)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <ShieldAlert size={14} /> {mentorError}
+                  </div>
+                )}
+
+                <button 
+                  type="submit" 
+                  className="btn btn-primary" 
+                  disabled={isReviewing}
+                  style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  {isReviewing ? (
+                    <><RefreshCw size={16} className="animate-spin" /> Menganalisis...</>
+                  ) : (
+                    <><Zap size={16} /> Review & Poles Prompt</>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* Hasil Polesan Prompt */}
+            {improvedPrompt && (
+              <div className="card" style={{ borderTop: '4px solid var(--success)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 style={{ fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <CheckCircle2 size={18} color="var(--success)" /> Prompt Terpoles Siap Pakai
+                  </h3>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={() => {
+                      const regex = /```text([\s\S]*?)```/i;
+                      const match = improvedPrompt.match(regex);
+                      const textToCopy = match ? match[1].trim() : improvedPrompt;
+                      navigator.clipboard.writeText(textToCopy);
+                      setCopiedText(true);
+                      setTimeout(() => setCopiedText(false), 2000);
+                    }}
+                    style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                  >
+                    <Clipboard size={12} /> {copiedText ? 'Disalin!' : 'Salin Prompt'}
+                  </button>
+                </div>
+                
+                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                  Salin prompt yang disempurnakan di bawah ini dan masukkan ke AI coding Anda.
+                </p>
+
+                <textarea
+                  className="input-field"
+                  readOnly
+                  value={(() => {
+                    const regex = /```text([\s\S]*?)```/i;
+                    const match = improvedPrompt.match(regex);
+                    return match ? match[1].trim() : improvedPrompt;
+                  })()}
+                  style={{ minHeight: '250px', fontFamily: 'monospace', fontSize: '0.85rem', backgroundColor: 'var(--bg-main)', cursor: 'default' }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Kolom Kanan: Diskusi & Tanya Jawab */}
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '620px', padding: '1.25rem', borderTop: '4px solid var(--accent)' }}>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <MessageSquare size={18} color="var(--accent)" /> Ruang Diskusi Mentor
+            </h3>
+            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              Tanyakan instruksi tambahan, ubah layout, atau diskusikan detail prompt bersama Mentor di sini.
+            </p>
+
+            {/* Area Chat */}
+            <div 
+              ref={mentorChatEndRef}
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                backgroundColor: 'var(--bg-main)',
+                padding: '1rem',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1rem',
+                marginBottom: '1rem'
+              }}
+            >
+              {mentorChats.length === 0 ? (
+                <div style={{ margin: 'auto', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem', padding: '2rem' }}>
+                  <MessageSquare size={36} color="var(--accent)" style={{ opacity: 0.3, marginBottom: '0.5rem', display: 'block', marginLeft: 'auto', marginRight: 'auto' }} />
+                  <span>Kirim review prompt Anda di sebelah kiri terlebih dahulu untuk memulai diskusi interaktif dengan AI Vibe Code Mentor.</span>
+                </div>
+              ) : (
+                mentorChats.map((chat, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      alignSelf: chat.role === 'user' ? 'flex-end' : 'flex-start',
+                      maxWidth: '85%',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: chat.role === 'user' ? 'flex-end' : 'flex-start'
+                    }}
+                  >
+                    <div style={{
+                      padding: '0.75rem 1rem',
+                      borderRadius: chat.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                      backgroundColor: chat.role === 'user' ? 'var(--primary-light)' : 'var(--bg-card)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-primary)',
+                      fontSize: '0.875rem',
+                      lineHeight: '1.5'
+                    }}>
+                      <MarkdownRenderer text={chat.content} />
+                    </div>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                      {chat.role === 'user' ? 'Anda' : 'Vibe Mentor'}
+                    </span>
+                  </div>
+                ))
+              )}
+              {isSendingChat && (
+                <div style={{ alignSelf: 'flex-start', display: 'flex', gap: '4px', padding: '0.5rem' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)', display: 'inline-block' }} />
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)', display: 'inline-block' }} />
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)', display: 'inline-block' }} />
+                </div>
+              )}
+            </div>
+
+            {/* Input Chat */}
+            <form onSubmit={handleSendMentorChat} style={{ display: 'flex', gap: '0.5rem' }}>
+              <input
+                type="text"
+                className="input-field"
+                placeholder={mentorChats.length === 0 ? "Review prompt dulu di sebelah kiri..." : "Diskusikan atau poles lagi dengan mentor..."}
+                value={mentorChatInput}
+                onChange={(e) => setMentorChatInput(e.target.value)}
+                disabled={mentorChats.length === 0 || isSendingChat}
+                style={{ flex: 1 }}
+              />
+              <button 
+                type="submit" 
+                className="btn btn-primary" 
+                disabled={mentorChats.length === 0 || !mentorChatInput.trim() || isSendingChat}
+                style={{ padding: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Send size={16} />
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>
