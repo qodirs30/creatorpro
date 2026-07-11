@@ -343,6 +343,9 @@ export default function MemexJournal() {
       activityLog: mergeArray(local?.activityLog, cloud?.activityLog),
       history: mergeArray(local?.history, cloud?.history),
       sukiKnowledge: mergedSukiKnowledge,
+      memexChats: mergeArray(local?.memexChats, cloud?.memexChats).sort((a, b) => {
+        return new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime();
+      }),
     };
   };
 
@@ -359,7 +362,8 @@ export default function MemexJournal() {
         counters: counters || [], 
         activityLog: activityLog || [], 
         history: history || [],
-        sukiKnowledge: sukiKnowledge || { content: '', updatedAt: new Date(0).toISOString() }
+        sukiKnowledge: sukiKnowledge || { content: '', updatedAt: new Date(0).toISOString() },
+        memexChats: memexChats || [],
       };
       if (cloudData) {
         const merged = mergeData(localData, cloudData);
@@ -1048,10 +1052,30 @@ export default function MemexJournal() {
     const d = new Date(isoStr);
     const now = new Date();
     const sameDay = d.toDateString() === now.toDateString();
+    
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const dayName = days[d.getDay()];
+    const timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
     if (sameDay) {
-      return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+      return `Hari Ini, ${timeStr}`;
     }
-    return d.toLocaleString('id-ID', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const sameYesterday = d.toDateString() === yesterday.toDateString();
+    if (sameYesterday) {
+      return `Kemarin, ${timeStr}`;
+    }
+
+    const diffTime = Math.abs(now - d);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays < 7) {
+      return `${dayName}, ${timeStr}`;
+    }
+
+    const dateStr = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+    return `${dateStr}, ${timeStr}`;
   };
 
   // Format nominal rupiah
@@ -1173,7 +1197,7 @@ export default function MemexJournal() {
       </div>
 
       {/* Banner Peringatan jika API Key belum diatur */}
-      {!apiKey && (
+      {aiProvider !== 'qodirsai' && !apiKey && (
         <div className="card card-danger" style={{ marginBottom: '2rem', display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <AlertCircle size={28} color="var(--danger)" style={{ flexShrink: 0 }} />
           <div>

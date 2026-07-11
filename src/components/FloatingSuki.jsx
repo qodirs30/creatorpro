@@ -29,6 +29,37 @@ export default function FloatingSuki() {
     return geminiKey;
   };
 
+  const formatChatTime = (isoStr) => {
+    if (!isoStr) return '';
+    const d = new Date(isoStr);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    
+    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    const dayName = days[d.getDay()];
+    const timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+    if (sameDay) {
+      return `Hari Ini, ${timeStr}`;
+    }
+    
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const sameYesterday = d.toDateString() === yesterday.toDateString();
+    if (sameYesterday) {
+      return `Kemarin, ${timeStr}`;
+    }
+
+    const diffTime = Math.abs(now - d);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays < 7) {
+      return `${dayName}, ${timeStr}`;
+    }
+
+    const dateStr = d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+    return `${dateStr}, ${timeStr}`;
+  };
+
   const [isOpen, setIsOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [loadingChat, setLoadingChat] = useState(false);
@@ -439,7 +470,7 @@ export default function FloatingSuki() {
                     <MarkdownRenderer text={chat.content} />
                   </div>
                   <span style={{ fontSize: '0.65rem', color: '#64748b', marginTop: '2px', alignSelf: chat.role === 'user' ? 'flex-end' : 'flex-start' }}>
-                    {new Date(chat.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                    {formatChatTime(chat.timestamp)}
                   </span>
                 </div>
               ))

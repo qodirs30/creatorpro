@@ -277,7 +277,7 @@ function AppLayout() {
     let timeoutId;
     const unsubscribe = useAppStore.subscribe((state) => {
       const keysToCheck = [
-        'memexCards', 'habits', 'scripts', 'socialPosts', 'counters', 'activityLog', 'history', 'sukiKnowledge',
+        'memexCards', 'habits', 'scripts', 'socialPosts', 'counters', 'activityLog', 'history', 'sukiKnowledge', 'memexChats',
         'geminiKey', 'groqKey', 'openAiKey', 'klingAccessKey', 'klingSecretKey', 'aiProvider', 'aiModel', 'enablePinLock', 'pin'
       ];
       const hasChanged = keysToCheck.some(key => state[key] !== lastStateRef.current[key]);
@@ -293,6 +293,7 @@ function AppLayout() {
           activityLog: state.activityLog || [],
           history: state.history || [],
           sukiKnowledge: state.sukiKnowledge || { content: '', updatedAt: new Date(0).toISOString() },
+          memexChats: state.memexChats || [],
           geminiKey: state.geminiKey || '',
           groqKey: state.groqKey || '',
           openAiKey: state.openAiKey || '',
@@ -420,6 +421,9 @@ const mergeData = (local, cloud) => {
     activityLog: mergeArray(local?.activityLog, cloud?.activityLog),
     history: mergeArray(local?.history, cloud?.history),
     sukiKnowledge: mergedSukiKnowledge,
+    memexChats: mergeArray(local?.memexChats, cloud?.memexChats).sort((a, b) => {
+      return new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime();
+    }),
     geminiKey: mergeVal(local?.geminiKey, cloud?.geminiKey, ''),
     groqKey: mergeVal(local?.groqKey, cloud?.groqKey, ''),
     openAiKey: mergeVal(local?.openAiKey, cloud?.openAiKey, ''),

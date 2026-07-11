@@ -192,6 +192,7 @@ const useAppStore = create(
         activityLog: data.activityLog || [],
         history: data.history || [],
         sukiKnowledge: data.sukiKnowledge || { content: '', updatedAt: new Date(0).toISOString() },
+        memexChats: data.memexChats || [],
         geminiKey: data.geminiKey || '',
         groqKey: data.groqKey || '',
         openAiKey: data.openAiKey || '',

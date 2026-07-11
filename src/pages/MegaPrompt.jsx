@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import useAppStore from '../store/useAppStore';
 import { generateContent, analyzeImageWithGemini } from '../utils/ai';
 import { Sparkles, Mic, MicOff, Copy, CheckCircle2, Wand2, Code, Image as ImageIcon, Film, Edit3, RefreshCw, AlertTriangle, Trash2, Globe, Camera, Upload, X } from 'lucide-react';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 const MODES = [
   {
@@ -53,6 +54,14 @@ const MODES = [
     description: 'Prompt untuk animasi foto ke video (Veo, Kling, Runway)',
     placeholder: 'contoh: foto ini dibikin gerak kayak lagi jalan di pantai',
   },
+  {
+    id: 'storyboard',
+    label: 'Script to Storyboard',
+    icon: Film,
+    color: '#3b82f6',
+    description: 'Ubah naskah video/iklan Anda menjadi prompt storyboard grid + prompt video per adegan',
+    placeholder: 'Tulis cerita kasar, naskah iklan, atau film pendek Anda di sini...',
+  },
 ];
 
 const ASPECT_RATIOS = {
@@ -62,6 +71,7 @@ const ASPECT_RATIOS = {
   vibe: [],
   universal: [],
   photoToPrompt: ['original', '1:1', '16:9', '9:16'],
+  storyboard: [],
 };
 
 export default function MegaPrompt() {
@@ -326,6 +336,46 @@ Prompt HARUS cinematic dan mencakup:
 
 OUTPUT: Hanya teks prompt final plain text dalam satu paragraf padat dan siap pakai. Tanpa markdown, tanpa asterisk.`;
 
+      case 'storyboard':
+        return `Kamu adalah "Storyboard Prompt Engineer" kelas dunia. User memberikan naskah/cerita video/iklan produk: "${userInput}"
+
+TUGASMU: Ubah naskah/cerita ini menjadi paket prompt storyboard yang sangat detail dan sistematis. Paket ini harus memiliki dua bagian utama:
+1. **Prompt Storyboard Sheet (Untuk AI Image Generator)**: Prompt detail dalam bahasa Inggris untuk menghasilkan satu gambar lembaran storyboard (storyboard sheet/grid layout) yang berisi panel-panel adegan visual utama secara konsisten (misal: "A 6-panel storyboard grid sheet, showing [visual brief], cinematic style, color grading, photorealistic, Unreal Engine 5 render, aspect ratio 16:9").
+2. **Scene-by-Scene Animation Prompts (Untuk AI Video Generator)**: Kumpulan prompt video (image-to-video) untuk masing-masing adegan/scene berdasarkan storyboard tadi, lengkap dengan deskripsi durasi (misal: 4s/8s), gerakan kamera (camera motion), gerakan subjek (subject motion), dan visual perubahan adegan yang halus sesuai naskah.
+
+ATURAN OUTPUT:
+- Gunakan struktur Markdown yang bersih, gunakan sub-heading, teks tebal (**), dan blok kode untuk prompt bahasa Inggris agar pengguna dapat membacanya dengan sangat nyaman.
+- Tulis penjelasan adegan dalam Bahasa Indonesia.
+- Teks prompt untuk di-copy paste ke generator gambar/video harus ditulis dalam Bahasa Inggris.
+
+Struktur Output yang Diharapkan:
+---
+### 🎬 PROMPT STORYBOARD SHEET (Copy-paste ke Midjourney/DALL-E 3/Gemini/Flux):
+\`\`\`text
+[Tulis prompt bahasa Inggris untuk storyboard sheet grid di sini]
+\`\`\`
+
+### 📽️ DAFTAR PROMPT VIDEO PER SCENE (Copy-paste ke Kling/Runway/Luma bersama gambar storyboard):
+
+#### 🎞️ Scene 1 (Durasi: [X] Detik)
+* **Deskripsi Visual:** [Tulis detail visual adegan]
+* **Prompt Animasi Video (Siap Copy):**
+\`\`\`text
+[Tulis prompt video bahasa Inggris untuk scene ini]
+\`\`\`
+
+#### 🎞️ Scene 2 (Durasi: [Y] Detik)
+* **Deskripsi Visual:** [Tulis detail visual adegan]
+* **Prompt Animasi Video (Siap Copy):**
+\`\`\`text
+[Tulis prompt video bahasa Inggris untuk scene ini]
+\`\`\`
+
+... (dst untuk scene lainnya sesuai naskah)
+---
+
+Hasilkan output yang terstruktur, padat, dan langsung siap digunakan.`;
+
       default:
         return basePrefix;
     }
@@ -418,7 +468,7 @@ OUTPUT: Hanya SUPER PROMPT final dalam satu paragraf padat bahasa Inggris, siap 
     try {
       const systemPrompt = buildSystemPrompt(activeMode, input);
       const result = await generateContent(apiKey, systemPrompt, aiProvider, aiModel);
-      const cleaned = cleanMarkdown(result);
+      const cleaned = activeMode === 'storyboard' ? result : cleanMarkdown(result);
       setUpgradedPrompt(cleaned);
 
       // log to history
@@ -741,18 +791,22 @@ OUTPUT: Hanya SUPER PROMPT final dalam satu paragraf padat bahasa Inggris, siap 
 
           {upgradedPrompt && (
             <div style={{
-              whiteSpace: 'pre-wrap',
               background: 'rgba(0,0,0,0.3)',
               padding: '1.25rem',
               borderRadius: '10px',
-              fontFamily: "'Menlo', 'Monaco', monospace",
-              fontSize: '0.9rem',
-              lineHeight: 1.7,
               border: '1px solid rgba(255,255,255,0.05)',
-              maxHeight: '500px',
+              maxHeight: '600px',
               overflowY: 'auto',
+              color: '#e2e8f0',
+              lineHeight: 1.7
             }}>
-              {upgradedPrompt}
+              {activeMode === 'storyboard' ? (
+                <MarkdownRenderer text={upgradedPrompt} />
+              ) : (
+                <div style={{ whiteSpace: 'pre-wrap', fontFamily: "'Menlo', 'Monaco', monospace", fontSize: '0.9rem' }}>
+                  {upgradedPrompt}
+                </div>
+              )}
             </div>
           )}
         </div>

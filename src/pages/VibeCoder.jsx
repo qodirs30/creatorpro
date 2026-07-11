@@ -5,7 +5,7 @@ import { generateContent } from '../utils/ai';
 import { 
   Terminal, Code, Clipboard, Download, Play, RefreshCw, Zap, 
   ShieldAlert, Sparkles, Paintbrush, FileText, CheckCircle2,
-  MessageSquare, Send
+  MessageSquare, Send, Upload, X
 } from 'lucide-react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 
@@ -54,6 +54,38 @@ export default function VibeCoder() {
   const [mentorError, setMentorError] = useState('');
   const [mentorChatInput, setMentorChatInput] = useState('');
   const [isSendingChat, setIsSendingChat] = useState(false);
+  const [refFile, setRefFile] = useState(null); // { name: string, content: string }
+  const refFileInputRef = useRef(null);
+
+  const handleRefFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      setMentorError('Ukuran file referensi maksimal 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setRefFile({
+        name: file.name,
+        content: event.target.result
+      });
+      setMentorError('');
+    };
+    reader.onerror = () => {
+      setMentorError('Gagal membaca file referensi.');
+    };
+    reader.readAsText(file);
+  };
+
+  const handleRemoveRefFile = () => {
+    setRefFile(null);
+    if (refFileInputRef.current) {
+      refFileInputRef.current.value = '';
+    }
+  };
 
   const mentorChatEndRef = useRef(null);
 
@@ -103,14 +135,19 @@ Tulis dengan gaya kasual profesional, suportif, dan edukatif dalam Bahasa Indone
     }
 
     try {
-      const systemPrompt = `${mentorSystemPrompt}\n\nPrompt asli pengguna yang ingin direview:\n"""\n${mentorPrompt}\n"""`;
+      let refContext = '';
+      if (refFile) {
+        refContext = `\n\n### FILE ACUAN/REFERENSI DESAIN (${refFile.name}):\nBerikut adalah instruksi/desain acuan dari file referensi pengguna. Pastikan hasil prompt baru 100% mematuhi layout, komponen, aturan style, atau instruksi coding dari file acuan ini:\n"""\n${refFile.content}\n"""\n`;
+      }
+
+      const systemPrompt = `${mentorSystemPrompt}${refContext}\n\nPrompt asli pengguna yang ingin direview:\n"""\n${mentorPrompt}\n"""`;
       const response = await generateContent(apiKey, systemPrompt, aiProvider, aiModel);
       
       setImprovedPrompt(response);
       
       // Reset chat diskusi dan masukkan review pertama sebagai balasan pembuka mentor
       setMentorChats([
-        { role: 'user', content: `Tolong review prompt ini:\n\n${mentorPrompt}` },
+        { role: 'user', content: `Tolong review prompt ini:\n\n${mentorPrompt}${refFile ? `\n\n*(Menggunakan file acuan: ${refFile.name})*` : ''}` },
         { role: 'assistant', content: response }
       ]);
 
@@ -120,7 +157,7 @@ Tulis dengan gaya kasual profesional, suportif, dan edukatif dalam Bahasa Indone
         category: 'Vibe Code Mentor',
         title: `Review Prompt: ${mentorPrompt.substring(0, 30)}...`,
         content: response.slice(0, 500) + '...',
-        meta: { originalPrompt: mentorPrompt }
+        meta: { originalPrompt: mentorPrompt, refFileName: refFile ? refFile.name : null }
       });
     } catch (err) {
       setMentorError(err.message || 'Gagal mereview prompt.');
@@ -148,9 +185,14 @@ Tulis dengan gaya kasual profesional, suportif, dan edukatif dalam Bahasa Indone
     }
 
     try {
+      let refContext = '';
+      if (refFile) {
+        refContext = `\n\n### FILE ACUAN/REFERENSI DESAIN (${refFile.name}):\n"""\n${refFile.content}\n"""\n`;
+      }
+
       // Susun prompt percakapan diskusi
       const chatHistoryText = updatedChats.map(c => `${c.role === 'user' ? 'User' : 'Mentor'}: ${c.content}`).join('\n');
-      const prompt = `${mentorSystemPrompt}\n\nPrompt Asli Pengguna:\n"""\n${mentorPrompt}\n"""\n\nDiskusi Tanya Jawab:\n${chatHistoryText}\nMentor:`;
+      const prompt = `${mentorSystemPrompt}${refContext}\n\nPrompt Asli Pengguna:\n"""\n${mentorPrompt}\n"""\n\nDiskusi Tanya Jawab:\n${chatHistoryText}\nMentor:`;
 
       const response = await generateContent(apiKey, prompt, aiProvider, aiModel);
       setMentorChats(prev => [...prev, { role: 'assistant', content: response }]);
@@ -2224,6 +2266,59 @@ Tulis laporan ini secara profesional dalam Bahasa Indonesia (kecuali kode teknis
                   required
                 />
                 
+                {/* Upload File Referensi */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', background: 'var(--bg-main)', padding: '0.75rem', borderRadius: '8px', border: '1px dashed var(--border-color)' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <FileText size={14} color="var(--primary)" /> File Referensi Desain / Aturan (Opsional)
+                  </span>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
+                    Unggah file acuan (.md, .txt, atau SKILL.md) agar model buatan Anda menuruti aturan/style tersebut.
+                  </p>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem' }}>
+                    <input
+                      type="file"
+                      ref={refFileInputRef}
+                      onChange={handleRefFileUpload}
+                      accept=".md,.txt,.json,SKILL.md,style.md"
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => refFileInputRef.current?.click()}
+                      style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    >
+                      <Upload size={14} /> Unggah Berkas Acuan
+                    </button>
+
+                    {refFile && (
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.25rem', 
+                        background: 'var(--primary-light)', 
+                        padding: '0.25rem 0.5rem', 
+                        borderRadius: '6px', 
+                        fontSize: '0.75rem',
+                        color: 'var(--primary)',
+                        border: '1px solid var(--primary)'
+                      }}>
+                        <span style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          📄 {refFile.name}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleRemoveRefFile}
+                          style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 {mentorError && (
                   <div style={{ color: 'var(--danger)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <ShieldAlert size={14} /> {mentorError}

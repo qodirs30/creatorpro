@@ -94,6 +94,7 @@ export async function uploadBackupToDatabase(uid, data) {
     activityLog: data.activityLog || [],
     history: data.history || [],
     sukiKnowledge: data.sukiKnowledge || { content: '', updatedAt: new Date(0).toISOString() },
+    memexChats: data.memexChats || [],
   };
 
   await set(userRef, {
