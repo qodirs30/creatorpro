@@ -525,6 +525,67 @@ function AuthGate({ children }) {
     return () => unsubscribe();
   }, [restoreBackup, setFirebaseUser, setIsAuthActive]);
 
+  // Auto-sync ketika tab aplikasi kembali aktif/difokuskan (sangat berguna untuk mobile PWA/browser)
+  useEffect(() => {
+    let focusTimeoutId;
+    const handleFocusSync = async () => {
+      if (!firebaseUser) return;
+      console.log('App focused or visible, running background sync...');
+      try {
+        const cloudData = await downloadBackupFromDatabase(firebaseUser.uid);
+        if (cloudData) {
+          const state = useAppStore.getState();
+          const localData = {
+            memexCards: state.memexCards || [],
+            habits: state.habits || [],
+            scripts: state.scripts || [],
+            socialPosts: state.socialPosts || [],
+            counters: state.counters || [],
+            activityLog: state.activityLog || [],
+            history: state.history || [],
+            sukiKnowledge: state.sukiKnowledge || { content: '', updatedAt: new Date(0).toISOString() },
+            memexChats: state.memexChats || [],
+            geminiKey: state.geminiKey || '',
+            groqKey: state.groqKey || '',
+            openAiKey: state.openAiKey || '',
+            klingAccessKey: state.klingAccessKey || '',
+            klingSecretKey: state.klingSecretKey || '',
+            aiProvider: state.aiProvider || 'gemini',
+            aiModel: state.aiModel || 'gemini-2.5-flash',
+            enablePinLock: state.enablePinLock ?? false,
+            pin: state.pin || '1234',
+          };
+          const merged = mergeData(localData, cloudData);
+          restoreBackup(merged);
+          await uploadBackupToDatabase(firebaseUser.uid, merged);
+        }
+      } catch (err) {
+        console.error('Focus background sync error:', err);
+      }
+    };
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        clearTimeout(focusTimeoutId);
+        focusTimeoutId = setTimeout(handleFocusSync, 1000);
+      }
+    };
+
+    const onWindowFocus = () => {
+      clearTimeout(focusTimeoutId);
+      focusTimeoutId = setTimeout(handleFocusSync, 1000);
+    };
+
+    window.addEventListener('focus', onWindowFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      window.removeEventListener('focus', onWindowFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      clearTimeout(focusTimeoutId);
+    };
+  }, [firebaseUser, restoreBackup]);
+
 
 
   const handleGoogleSignIn = async () => {
