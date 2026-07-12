@@ -446,7 +446,7 @@ export default function MemexJournal() {
       const newCard = {
         ...editingCard,
         id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
+        createdAt: editingCard.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
       addMemexCard(newCard);
@@ -1092,6 +1092,22 @@ export default function MemexJournal() {
     });
   };
 
+  // Konversi ISO string ke format input datetime-local browser (local time)
+  const toDatetimeLocal = (isoString) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return '';
+    const tzOffset = date.getTimezoneOffset() * 60000; // offset dalam ms
+    return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+  };
+
+  // Konversi datetime-local browser ke ISO string
+  const fromDatetimeLocal = (localString) => {
+    if (!localString) return new Date().toISOString();
+    const date = new Date(localString);
+    return date.toISOString();
+  };
+
   // Format jam chat: jam:menit saja jika hari ini, tambahkan tanggal jika bukan hari ini
   const formatChatTime = (isoStr) => {
     if (!isoStr) return '';
@@ -1393,6 +1409,7 @@ export default function MemexJournal() {
                         title: '',
                         type: 'note',
                         tags: [],
+                        createdAt: new Date().toISOString(),
                         data: { summary: '' },
                         companionComment: 'Kartu ini dibuat secara manual oleh pengguna.'
                       });
@@ -2490,6 +2507,24 @@ export default function MemexJournal() {
                     <option value="contact">Kontak (Contact)</option>
                     <option value="custom">Kategori Kustom...</option>
                   </select>
+                </div>
+
+                {/* Tanggal & Waktu Dibuat */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>Tanggal & Waktu Catatan</label>
+                  <input
+                    type="datetime-local"
+                    className="input-field"
+                    value={toDatetimeLocal(editingCard.createdAt)}
+                    onChange={(e) => {
+                      const newIso = fromDatetimeLocal(e.target.value);
+                      setEditingCard({ ...editingCard, createdAt: newIso });
+                    }}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
+                  />
                 </div>
 
                 {/* Input Nama Kategori Kustom */}
