@@ -977,20 +977,32 @@ export default function MemexJournal() {
 
         let cleanReply = reply.trim();
 
+        // Helper untuk parse JSON dengan menghapus komentar secara aman
+        const safeJsonParse = (str) => {
+          try {
+            const cleaned = str.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*")|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) => g ? m : "");
+            return JSON.parse(cleaned);
+          } catch (e) {
+            return JSON.parse(str); // Fallback ke parse biasa
+          }
+        };
+
         // 1. Proses record_card (tambah kartu)
         const recordRegex = /<record_card>([\s\S]*?)<\/record_card>/g;
         let recordMatch;
         while ((recordMatch = recordRegex.exec(reply)) !== null) {
           try {
-            const cardObj = JSON.parse(recordMatch[1].trim());
-            addMemexCard({
-              type: cardObj.type || 'note',
-              title: cardObj.title || 'Catatan Chat',
-              tags: cardObj.tags || ['chat'],
-              data: cardObj.data || { summary: userMsg },
-              companionComment: reply.replace(/<record_card>[\s\S]*?<\/record_card>|<update_card>[\s\S]*?<\/update_card>|<delete_card>[\s\S]*?<\/delete_card>/g, '').trim(),
-              ...(cardObj.createdAt ? { createdAt: cardObj.createdAt } : {})
-            });
+            const cardObj = safeJsonParse(recordMatch[1].trim());
+            if (cardObj) {
+              addMemexCard({
+                type: cardObj.type || 'note',
+                title: cardObj.title || 'Catatan Chat',
+                tags: cardObj.tags || ['chat'],
+                data: cardObj.data || { summary: userMsg },
+                companionComment: reply.replace(/<record_card>[\s\S]*?<\/record_card>|<update_card>[\s\S]*?<\/update_card>|<delete_card>[\s\S]*?<\/delete_card>/g, '').trim(),
+                ...(cardObj.createdAt ? { createdAt: cardObj.createdAt } : {})
+              });
+            }
           } catch (parseErr) {
             console.error("Gagal parse record_card dari chat Suki di Memex:", parseErr);
           }
@@ -1001,8 +1013,8 @@ export default function MemexJournal() {
         let updateMatch;
         while ((updateMatch = updateRegex.exec(reply)) !== null) {
           try {
-            const updateObj = JSON.parse(updateMatch[1].trim());
-            if (updateObj.cardId) {
+            const updateObj = safeJsonParse(updateMatch[1].trim());
+            if (updateObj && updateObj.cardId) {
               updateMemexCard(updateObj.cardId, updateObj.updates);
             }
           } catch (updateErr) {
@@ -1015,8 +1027,8 @@ export default function MemexJournal() {
         let deleteMatch;
         while ((deleteMatch = deleteRegex.exec(reply)) !== null) {
           try {
-            const deleteObj = JSON.parse(deleteMatch[1].trim());
-            if (deleteObj.cardId) {
+            const deleteObj = safeJsonParse(deleteMatch[1].trim());
+            if (deleteObj && deleteObj.cardId) {
               deleteMemexCard(deleteObj.cardId);
             }
           } catch (deleteErr) {

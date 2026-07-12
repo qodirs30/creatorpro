@@ -135,11 +135,17 @@ const useAppStore = create(
         ]
       })),
       deleteMemexCard: (id) => set((state) => ({
-        memexCards: state.memexCards.filter(c => c.id !== id)
+        memexCards: state.memexCards.filter(c => String(c.id) !== String(id))
       })),
       setMemexCards: (cards) => set({ memexCards: cards }),
       updateMemexCard: (id, updates) => set((state) => ({
-        memexCards: state.memexCards.map(c => c.id === id ? { ...c, ...updates } : c)
+        memexCards: state.memexCards.map(c => {
+          if (String(c.id) === String(id)) {
+            const mergedData = (updates.data && c.data) ? { ...c.data, ...updates.data } : (updates.data || c.data);
+            return { ...c, ...updates, data: mergedData };
+          }
+          return c;
+        })
       })),
       memexCompanion: {
         name: 'Suki',

@@ -561,7 +561,9 @@ Konfirmasikan secara kasual bahwa kamu sudah menghapus catatan tersebut.
 }
 </delete_card>
 
-Jika pengguna tidak berniat mencatat, memperbarui, atau menghapus apa-apa, cukup balas chat biasa tanpa tag XML di atas.`;
+Jika pengguna tidak berniat mencatat, memperbarui, atau menghapus apa-apa, cukup balas chat biasa tanpa tag XML di atas.
+
+PENTING: Semua isi JSON di dalam blok XML (<record_card>, <update_card>, dan <delete_card>) harus berupa JSON murni yang VALID dan dapat diparse langsung menggunakan JSON.parse(). JANGAN pernah menyertakan komentar (seperti // atau /* */) di dalam blok JSON tersebut karena akan merusak sistem parser kami.`;
 
   // Bersihkan chatHistory dari pesan user terakhir jika sudah sama dengan userMessage (mencegah double prompt)
   const historyToRender = [...(chatHistory || [])];
