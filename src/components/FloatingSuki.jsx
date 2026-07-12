@@ -19,7 +19,7 @@ export default function FloatingSuki() {
     memexCompanion, sukiKnowledge, memexCards,
     geminiKey, groqKey, openAiKey,
     aiProvider, aiModel, addMemexCard,
-    habits, activityLog
+    habits, activityLog, updateMemexCard, deleteMemexCard
   } = useAppStore();
 
   const getApiKey = () => {
@@ -255,26 +255,59 @@ export default function FloatingSuki() {
         );
 
         let cleanReply = reply.trim();
+
+        // 1. Proses record_card (tambah kartu)
         const recordRegex = /<record_card>([\s\S]*?)<\/record_card>/g;
-        let match;
-        
-        while ((match = recordRegex.exec(cleanReply)) !== null) {
-          const jsonStr = match[1].trim();
+        let recordMatch;
+        while ((recordMatch = recordRegex.exec(reply)) !== null) {
           try {
-            const cardObj = JSON.parse(jsonStr);
+            const cardObj = JSON.parse(recordMatch[1].trim());
             addMemexCard({
               type: cardObj.type || 'note',
               title: cardObj.title || 'Catatan Chat',
               tags: cardObj.tags || ['chat'],
               data: cardObj.data || { summary: userMsg },
-              companionComment: cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim()
+              companionComment: reply.replace(/<record_card>[\s\S]*?<\/record_card>|<update_card>[\s\S]*?<\/update_card>|<delete_card>[\s\S]*?<\/delete_card>/g, '').trim()
             });
           } catch (parseErr) {
             console.error("Gagal parse record_card dari chat Suki:", parseErr);
           }
         }
-        
-        cleanReply = cleanReply.replace(/<record_card>[\s\S]*?<\/record_card>/g, '').trim();
+
+        // 2. Proses update_card (ubah kartu)
+        const updateRegex = /<update_card>([\s\S]*?)<\/update_card>/g;
+        let updateMatch;
+        while ((updateMatch = updateRegex.exec(reply)) !== null) {
+          try {
+            const updateObj = JSON.parse(updateMatch[1].trim());
+            if (updateObj.cardId) {
+              updateMemexCard(updateObj.cardId, updateObj.updates);
+            }
+          } catch (updateErr) {
+            console.error("Gagal parse update_card dari chat Suki:", updateErr);
+          }
+        }
+
+        // 3. Proses delete_card (hapus kartu)
+        const deleteRegex = /<delete_card>([\s\S]*?)<\/delete_card>/g;
+        let deleteMatch;
+        while ((deleteMatch = deleteRegex.exec(reply)) !== null) {
+          try {
+            const deleteObj = JSON.parse(deleteMatch[1].trim());
+            if (deleteObj.cardId) {
+              deleteMemexCard(deleteObj.cardId);
+            }
+          } catch (deleteErr) {
+            console.error("Gagal parse delete_card dari chat Suki:", deleteErr);
+          }
+        }
+
+        // Bersihkan semua tag XML dari reply teks agar tidak muncul di chat bubble
+        cleanReply = cleanReply
+          .replace(/<record_card>[\s\S]*?<\/record_card>/g, '')
+          .replace(/<update_card>[\s\S]*?<\/update_card>/g, '')
+          .replace(/<delete_card>[\s\S]*?<\/delete_card>/g, '')
+          .trim();
 
         addMemexChat({ role: 'assistant', content: cleanReply });
       }

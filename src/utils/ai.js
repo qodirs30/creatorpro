@@ -312,7 +312,7 @@ export async function generateCompanionChat(apiKey, companion, chatHistory, card
     else if (c.type === 'quote') detail = `"${c.data?.quote || '-'}" — ${c.data?.author || 'Anonim'}`;
     else if (c.type === 'contact') detail = `${c.data?.name || '-'} (${c.data?.relationship || '-'})`;
     else detail = c.data?.summary || '-';
-    return `  • [${d}] [${(c.type || 'note').toUpperCase()}] ${c.title} → ${detail}`;
+    return `  • [ID: ${c.id}] [Tanggal: ${d}] [Kategori: ${(c.type || 'note').toUpperCase()}] ${c.title} → ${detail}`;
   };
 
   // ─── Layer 1: Monthly Summary Table (selalu diinject, sangat compact) ────
@@ -531,7 +531,36 @@ Jika pengguna meminta mencatat beberapa hal sekaligus, kamu BISA menyertakan beb
 }
 </record_card>
 
-Jika pengguna tidak berniat mencatat apa-apa, cukup balas chat biasa tanpa tag <record_card>.`;
+Kemampuan Memperbarui/Merevisi Kartu (WAJIB):
+Jika pengguna meminta kamu mengubah, merevisi, mengupdate nominal keuangan, mengganti kategori, memperbaiki kesalahan ketik pada judul, atau merubah tanggal dari catatan/kartu yang sudah ada di DATABASE MEMORI di atas, cari ID kartu tersebut pada daftar memori, lalu kamu WAJIB menyertakan blok XML/JSON berikut di paling bawah jawabanmu. 
+Konfirmasikan secara kasual bahwa kamu sudah memperbarui catatan tersebut.
+<update_card>
+{
+  "cardId": "id_kartu_yang_ingin_diubah",
+  "updates": {
+    "title": "Judul baru (opsional)",
+    "tags": ["tag1", "tag2"], // opsional
+    "createdAt": "ISO_timestamp_baru_jika_mengubah_tanggal_YYYY-MM-DDTHH:mm:ss.sssZ (opsional)",
+    "data": {
+      // Properti data spesifik yang ingin diupdate, misal:
+      // "amount": nominal_baru (integer murni),
+      // "category": "kategori_baru",
+      // "todo": "deskripsi tugas baru"
+    }
+  }
+}
+</update_card>
+
+Kemampuan Menghapus Kartu (WAJIB):
+Jika pengguna meminta kamu menghapus, men-delete, menghilangkan, atau melenyapkan suatu catatan/transaksi/tugas tertentu yang salah dari DATABASE MEMORI di atas, cari ID kartu tersebut pada daftar memori, lalu kamu WAJIB menyertakan blok XML/JSON berikut di paling bawah jawabanmu.
+Konfirmasikan secara kasual bahwa kamu sudah menghapus catatan tersebut.
+<delete_card>
+{
+  "cardId": "id_kartu_yang_ingin_dihapus"
+}
+</delete_card>
+
+Jika pengguna tidak berniat mencatat, memperbarui, atau menghapus apa-apa, cukup balas chat biasa tanpa tag XML di atas.`;
 
   // Bersihkan chatHistory dari pesan user terakhir jika sudah sama dengan userMessage (mencegah double prompt)
   const historyToRender = [...(chatHistory || [])];
