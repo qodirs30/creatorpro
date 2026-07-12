@@ -267,7 +267,8 @@ export default function FloatingSuki() {
               title: cardObj.title || 'Catatan Chat',
               tags: cardObj.tags || ['chat'],
               data: cardObj.data || { summary: userMsg },
-              companionComment: reply.replace(/<record_card>[\s\S]*?<\/record_card>|<update_card>[\s\S]*?<\/update_card>|<delete_card>[\s\S]*?<\/delete_card>/g, '').trim()
+              companionComment: reply.replace(/<record_card>[\s\S]*?<\/record_card>|<update_card>[\s\S]*?<\/update_card>|<delete_card>[\s\S]*?<\/delete_card>/g, '').trim(),
+              ...(cardObj.createdAt ? { createdAt: cardObj.createdAt } : {})
             });
           } catch (parseErr) {
             console.error("Gagal parse record_card dari chat Suki:", parseErr);

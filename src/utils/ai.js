@@ -521,6 +521,7 @@ Jika pengguna meminta mencatat beberapa hal sekaligus, kamu BISA menyertakan beb
   "type": "task | transaction | quote | contact | note | [kategori_kustom_lainnya_1_kata_lowercase]",
   "title": "Judul singkat kartu representatif (maksimal 5 kata)",
   "tags": ["tag1", "tag2"],
+  "createdAt": "ISO_timestamp_jika_ditentukan_oleh_pengguna_untuk_masa_lalu_atau_masa_depan_YYYY-MM-DDTHH:mm:ss.sssZ (opsional, gunakan ini jika pengguna menyebutkan tanggal spesifik seperti 'kemarin', 'tanggal 11', '10 juni', dll. Hitung tanggal tersebut berdasarkan WAKTU & TANGGAL SAAT INI dan jadikan format ISO string)",
   "data": { 
     // Jika "task": { "todo": "deskripsi tugas", "dueDate": "tanggal YYYY-MM-DD (jika ada)", "dueTime": "waktu HH:MM dalam format 24 jam (jika ada pengingat spesifik, misal 'jam 19:12' -> '19:12')" }
     // Jika "transaction": { "amount": nominal uang murni (integer), "category": "makanan/transportasi/kopi/lainnya", "type": "expense" atau "income" }
