@@ -149,14 +149,6 @@ export default function Settings() {
         { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Default)' },
         { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' }
       ]
-    },
-    gemini: {
-      name: 'Google Gemini',
-      tag: 'Pakai Key Pribadi',
-      models: [
-        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Super Cepat)' },
-        { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Lebih Pintar)' }
-      ]
     }
   };
 
@@ -783,64 +775,6 @@ export default function Settings() {
       </h2>
       
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
-        
-        {/* Gemini API Key */}
-        <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
-            <span style={{ fontWeight: '700', fontSize: '1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Key size={18} color="var(--primary)" /> Google Gemini API Key
-            </span>
-            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--primary)', textDecoration: 'none' }}>
-              Dapatkan Key <ExternalLink size={14} />
-            </a>
-          </div>
-          
-          <div style={{ position: 'relative' }}>
-            <input 
-              type={showKeys['gemini-0'] ? 'text' : 'password'}
-              name="geminiApiKey"
-              autocomplete="off"
-              className="input-field" 
-              placeholder="Masukkan API Key Gemini Anda" 
-              value={localGemini[0] || ''} 
-              onChange={(e) => {
-                const updated = [...localGemini];
-                updated[0] = e.target.value;
-                setLocalGemini(updated);
-              }} 
-              style={{ 
-                fontFamily: 'monospace', 
-                fontSize: '0.85rem',
-                paddingRight: '2.5rem',
-                margin: 0
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowKeys(prev => ({ ...prev, 'gemini-0': !prev['gemini-0'] }))}
-              style={{
-                position: 'absolute',
-                right: '0.75rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-              title={showKeys['gemini-0'] ? "Sembunyikan" : "Tampilkan"}
-              aria-label={showKeys['gemini-0'] ? "Sembunyikan API Key" : "Tampilkan API Key"}
-            >
-              {showKeys['gemini-0'] ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
-            Hanya diperlukan jika Anda memilih provider "Google Gemini (Pakai Key Pribadi)" di atas.
-          </p>
-        </div>
 
         {/* Kling - Access Key */}
         <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>

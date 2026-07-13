@@ -41,13 +41,31 @@ export async function generateContent(apiKeysString, prompt, provider = 'gemini'
 }
 
 async function generateQodirsAi(prompt, model, contents = null) {
-  const response = await fetch('/.netlify/functions/chat', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ prompt, model, contents })
-  });
+  let endpoint = '/.netlify/functions/chat';
+  let response;
+  let isNetlify = true;
+
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, model, contents })
+    });
+    if (response.status === 404) {
+      isNetlify = false;
+    }
+  } catch (err) {
+    isNetlify = false;
+  }
+
+  if (!isNetlify) {
+    endpoint = '/api/chat';
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, model, contents })
+    });
+  }
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));

@@ -27,7 +27,7 @@ const useAppStore = create(
       klingSecretKey: '', setKlingSecretKey: (k) => set({ klingSecretKey: k }),
       
       // Default Provider untuk Teks
-      aiProvider: 'gemini', 
+      aiProvider: 'qodirsai', 
       setAiProvider: (provider) => set({ aiProvider: provider }),
       aiModel: 'gemini-2.5-flash',
       setAiModel: (model) => set({ aiModel: model }),
@@ -204,7 +204,7 @@ const useAppStore = create(
         openAiKey: data.openAiKey || '',
         klingAccessKey: data.klingAccessKey || '',
         klingSecretKey: data.klingSecretKey || '',
-        aiProvider: data.aiProvider || 'gemini',
+        aiProvider: data.aiProvider || 'qodirsai',
         aiModel: data.aiModel || 'gemini-2.5-flash',
         enablePinLock: data.enablePinLock ?? false,
         pin: data.pin || '1234',
