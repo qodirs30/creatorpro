@@ -40,13 +40,13 @@ export async function generateContent(apiKeysString, prompt, provider = 'gemini'
   throw lastError || new Error('Gagal memproses permintaan AI.');
 }
 
-async function generateQodirsAi(prompt, model) {
+async function generateQodirsAi(prompt, model, contents = null) {
   const response = await fetch('/.netlify/functions/chat', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ prompt, model })
+    body: JSON.stringify({ prompt, model, contents })
   });
 
   if (!response.ok) {
@@ -161,7 +161,23 @@ async function generateOpenAI(apiKey, prompt, model) {
  * @param {string} prompt - Prompt instruction
  * @param {string} model - Gemini model
  */
-export async function analyzeImageWithGemini(apiKeysString, imageDataUrl, prompt, model = 'gemini-2.5-flash') {
+export async function analyzeImageWithGemini(apiKeysString, imageDataUrl, prompt, provider = 'gemini', model = 'gemini-2.5-flash') {
+  if (provider === 'qodirsai') {
+    if (!imageDataUrl || !imageDataUrl.startsWith('data:')) throw new Error('Format gambar tidak valid.');
+    const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) throw new Error('Format data URL gambar tidak valid.');
+    const [, mimeType, base64Data] = match;
+
+    const contents = [{
+      parts: [
+        { inline_data: { mime_type: mimeType, data: base64Data } },
+        { text: prompt }
+      ]
+    }];
+
+    return await generateQodirsAi(prompt, model, contents);
+  }
+
   if (!apiKeysString) throw new Error('API Key Gemini belum diatur.');
   const keys = apiKeysString.split(/[\s,]+/).map(k => k.trim()).filter(Boolean);
   if (keys.length === 0) throw new Error('API Key tidak valid.');
@@ -587,7 +603,61 @@ PENTING: Semua isi JSON di dalam blok XML (<record_card>, <update_card>, dan <de
 /**
  * Menganalisis file multimodal (Gambar / PDF) dan mengekstraknya menjadi kartu Memex (JSON) menggunakan Gemini.
  */
-export async function extractMemexCardWithMultimodal(apiKeysString, fileDataUrl, textPrompt, model = 'gemini-2.5-flash') {
+export async function extractMemexCardWithMultimodal(apiKeysString, fileDataUrl, textPrompt, provider = 'gemini', model = 'gemini-2.5-flash') {
+  if (provider === 'qodirsai') {
+    if (!fileDataUrl || !fileDataUrl.startsWith('data:')) throw new Error('Format berkas tidak valid.');
+    const match = fileDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) throw new Error('Format data URL berkas tidak valid.');
+    const [, mimeType, base64Data] = match;
+
+    const promptSystem = `Kamu adalah sistem ekstraksi AI jurnal Memex. Tugasmu adalah menganalisis dokumen atau gambar yang dilampirkan beserta catatan tambahan dari pengguna berikut:
+Catatan Tambahan Pengguna: "${textPrompt || 'Tidak ada catatan tambahan'}"
+
+Harap analisis konten dokumen/gambar tersebut dan lakukan ekstraksi menjadi format JSON kartu jurnal terstruktur.
+
+Ketentuan Ekstraksi:
+1. Tentukan jenis kartu ("type") yang paling cocok dari pilihan berikut atau buat kategori kustom baru:
+   - Kategori Default:
+     - "task": Jika berisi tugas, rencana, atau pekerjaan yang perlu diselesaikan.
+     - "transaction": Jika berisi pengeluaran uang, pemasukan, belanja, atau transaksi finansial (misal struk belanja, kuitansi).
+     - "quote": Jika berisi kutipan kata bijak, lirik lagu, atau kutipan bacaan yang berharga.
+     - "contact": Jika berisi informasi tentang nama orang, hubungan, kontak baru, atau pertemuan sosial.
+     - "note": Jika berisi catatan harian, ide, info umum, ringkasan isi dokumen, atau memo biasa.
+   - Kategori Kustom: Jika informasi tidak cocok dengan kategori default (misalnya ide baru, resep masakan, kesehatan/wellness, wishlist belanjaan, mimpi, log hobi, dll), buatlah kategori baru dalam 1 kata lowercase (contoh: "ide", "resep", "kesehatan", "wishlist", "hobi", "mimpi").
+2. Buat "title" berupa judul yang sangat singkat, padat, dan representatif (maksimal 5 kata) yang meringkas isi dokumen/gambar.
+3. Buat array "tags" berisi kata kunci penting (1-3 kata kunci, lowercase, tanpa spasi panjang).
+4. Buat objek "data" berisi detail spesifik tergantung tipenya:
+   - Jika "task": { "todo": "deskripsi tugas", "dueDate": "tanggal tenggat format YYYY-MM-DD (jika ada, jika tidak kosongkan)" }
+   - Jika "transaction": { "amount": angka nominal uang (wajib integer angka murni tanpa titik/koma/simbol. GUNA ATURAN RIBUAN: Jika pengguna menginput nominal angka singkat/kecil tanpa ribuan, contoh: "15", "50", "150", konversikan otomatis ke ribuan dengan mengalikan 1000 sehingga menjadi 15000, 50000, 150000. Kecuali jika nominal sudah ditulis lengkap seperti 15000), "category": "makanan/transportasi/hosting/kopi/lainnya", "type": "expense" atau "income" }
+   - Jika "quote": { "quote": "teks kutipan", "author": "nama penulis kutipan (jika ada, jika tidak tulis 'Anonim')" }
+   - Jika "contact": { "name": "nama orang", "relationship": "rekan kerja/teman/keluarga/klien", "context": "keterangan pertemuan/catatan" }
+   - Jika "note" atau kategori kustom lainnya: { "summary": "ringkasan isi atau deskripsi dari dokumen/gambar tersebut dalam 1-2 kalimat" }
+5. Buat properti "companionComment". Ini adalah komentar spontan yang ditulis dari perspektif karakter AI Companion bernama Suki. Suki adalah teman dekat yang santai, menggunakan gaya bicara gaul santai/lucu kekinian Indonesia (gue, lo, dll), agak usil/humoris, menyemangati namun bisa bercanda meledek jika isi dokumennya aneh/kocak. Sesuaikan komentar dengan isi berkas tersebut.
+
+Harus mengembalikan output dalam format JSON MURNI yang valid tanpa teks pembuka atau penutup lainnya. Jangan gunakan backticks markdown di luar json. Format JSON yang dikembalikan harus berupa:
+{
+  "type": "...",
+  "title": "...",
+  "tags": ["..."],
+  "data": { ... },
+  "companionComment": "..."
+}`;
+
+    const contents = [{
+      parts: [
+        { inline_data: { mime_type: mimeType, data: base64Data } },
+        { text: promptSystem }
+      ]
+    }];
+
+    const responseText = await generateQodirsAi(promptSystem, model, contents);
+    let cleaned = responseText.trim();
+    if (cleaned.startsWith('```')) {
+      cleaned = cleaned.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+    }
+    return JSON.parse(cleaned);
+  }
+
   if (!apiKeysString) throw new Error('API Key Gemini belum diatur.');
   const keys = apiKeysString.split(/[\s,]+/).map(k => k.trim()).filter(Boolean);
   if (keys.length === 0) throw new Error('API Key tidak valid.');
@@ -708,7 +778,44 @@ Harus mengembalikan output dalam format JSON MURNI yang valid tanpa teks pembuka
 /**
  * Menganalisis berkas dokumen (PDF/TXT/Gambar) dan mengekstrak seluruh isinya menjadi format Markdown catalog detail.
  */
-export async function extractDocumentToMarkdown(apiKeysString, fileDataUrl, mimeType, model = 'gemini-2.5-flash') {
+export async function extractDocumentToMarkdown(apiKeysString, fileDataUrl, mimeType, provider = 'gemini', model = 'gemini-2.5-flash') {
+  if (provider === 'qodirsai') {
+    if (!fileDataUrl || !fileDataUrl.startsWith('data:')) throw new Error('Format berkas tidak valid.');
+    const match = fileDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) throw new Error('Format data URL berkas tidak valid.');
+    const [, , base64Data] = match;
+
+    const prompt = `Kamu adalah AI Document Parser ahli. Tugasmu adalah membaca dan menganalisis berkas dokumen (PDF/TXT/Gambar) ini secara lengkap, lalu mengekstrak semua data yang ada di dalamnya secara terperinci.
+  
+  Ubah hasilnya menjadi tulisan format teks biasa yang rapi, terstruktur, lengkap, dan fleksibel sesuai dengan data yang dikirim oleh user. 
+  JANGAN gunakan format tabel. JANGAN gunakan tanda bintang (* atau **) untuk menebalkan tulisan, melainkan gunakan teks biasa saja.
+  
+  Khusus untuk data laptop/pricelist produk, usahakan format outputnya terstruktur kurang lebih seperti contoh berikut (sesuaikan dengan data riil yang ada pada dokumen):
+  
+  Tipe Model/sku : [Model/SKU] - [Harga]
+  Spesifikasi Utama
+  Prosesor: [Prosesor]
+  Memori (RAM): [RAM]
+  Penyimpanan: [Penyimpanan]
+  Layar: [Layar]
+  Sistem Operasi: [Sistem Operasi]
+  Software Bundling: [Software seperti OHS, Microsoft 365, dll.]
+  Fitur Tambahan: [Fitur tambahan seperti Backlit Keyboard, dll.]
+  Warna: [Warna]
+  Garansi Resmi: [Garansi]
+  
+  Buat formatnya mengalir, fleksibel, mudah dibaca, dan mudah direvisi secara manual. Pertahankan semua informasi teknis, harga, dan nama produk secara lengkap dan akurat. Kembalikan HANYA teks murni tanpa penjelasan pembuka atau penutup lainnya.`;
+
+    const contents = [{
+      parts: [
+        { inline_data: { mime_type: mimeType, data: base64Data } },
+        { text: prompt }
+      ]
+    }];
+
+    return await generateQodirsAi(prompt, model, contents);
+  }
+
   if (!apiKeysString) throw new Error('API Key Gemini belum diatur.');
   const keys = apiKeysString.split(/[\s,]+/).map(k => k.trim()).filter(Boolean);
   if (keys.length === 0) throw new Error('API Key tidak valid.');

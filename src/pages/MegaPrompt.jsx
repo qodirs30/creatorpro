@@ -386,7 +386,7 @@ Hasilkan output yang terstruktur, padat, dan langsung siap digunakan.`;
       setError('Upload foto dulu ya.');
       return;
     }
-    if (!geminiKey) {
+    if (aiProvider !== 'qodirsai' && !geminiKey) {
       setError('Fitur Photo to Prompt butuh Gemini API Key (untuk analisis vision). Set di menu Pengaturan.');
       return;
     }
@@ -418,7 +418,7 @@ Analisa wajib mencakup:
 
 OUTPUT: Hanya SUPER PROMPT final dalam satu paragraf padat bahasa Inggris, siap langsung di-paste. Jangan ada pembuka, penutup, atau penjelasan meta.`;
 
-      const result = await analyzeImageWithGemini(geminiKey, uploadedImage, analysisPrompt, aiModel || 'gemini-2.5-flash');
+      const result = await analyzeImageWithGemini(geminiKey, uploadedImage, analysisPrompt, aiProvider, aiModel || 'gemini-2.5-flash');
       const cleaned = cleanMarkdown(result);
       setUpgradedPrompt(cleaned);
 

@@ -547,8 +547,8 @@ export default function MemexJournal() {
 
     // Validasi provider jika mengunggah gambar/PDF
     const isTxt = selectedFile && (selectedFile.name.split('.').pop().toLowerCase() === 'txt' || selectedFile.type === 'text/plain');
-    if (selectedFile && !isTxt && aiProvider !== 'gemini') {
-      alert('Ekstraksi berkas gambar atau PDF saat ini hanya didukung untuk model Gemini. Silakan ubah provider Anda ke Gemini di halaman Pengaturan.');
+    if (selectedFile && !isTxt && aiProvider !== 'gemini' && aiProvider !== 'qodirsai') {
+      alert('Ekstraksi berkas gambar atau PDF saat ini hanya didukung untuk model Gemini atau Server Proxy. Silakan ubah provider Anda di halaman Pengaturan.');
       return;
     }
 
@@ -569,8 +569,8 @@ export default function MemexJournal() {
           const combinedText = `Isi Dokumen (${selectedFile.name}):\n${fileTextContent}\n\nCatatan Tambahan Pengguna:\n${textCapture}`;
           result = await extractMemexCard(apiKey, combinedText, aiProvider, aiModel);
         } else {
-          // Kirim berkas Base64 (PDF/Gambar) ke API Multimodal Gemini
-          result = await extractMemexCardWithMultimodal(apiKey, fileDataUrl, textCapture, aiModel);
+          // Kirim berkas Base64 (PDF/Gambar) ke API Multimodal Gemini/Proxy
+          result = await extractMemexCardWithMultimodal(apiKey, fileDataUrl, textCapture, aiProvider, aiModel);
         }
       } else {
         // Ekstrak dari teks biasa
@@ -641,7 +641,7 @@ export default function MemexJournal() {
   };
 
   const processKnowledgeFile = async (file) => {
-    if (!apiKey) {
+    if (aiProvider !== 'qodirsai' && !apiKey) {
       setKnowledgeErrorMsg('API Key belum diatur! Harap atur API Key Anda di menu Pengaturan.');
       return;
     }
@@ -656,8 +656,8 @@ export default function MemexJournal() {
       return;
     }
 
-    if (!isTxt && aiProvider !== 'gemini') {
-      setKnowledgeErrorMsg('Ekstraksi PDF atau Gambar memerlukan model Google Gemini. Silakan ubah provider ke Gemini di Pengaturan.');
+    if (!isTxt && aiProvider !== 'gemini' && aiProvider !== 'qodirsai') {
+      setKnowledgeErrorMsg('Ekstraksi PDF atau Gambar memerlukan model Google Gemini atau Server Proxy. Silakan ubah provider di Pengaturan.');
       return;
     }
 
@@ -711,7 +711,7 @@ export default function MemexJournal() {
             reader.readAsDataURL(file);
           });
 
-          const extractedMarkdown = await extractDocumentToMarkdown(apiKey, dataUrl, file.type, aiModel);
+          const extractedMarkdown = await extractDocumentToMarkdown(apiKey, dataUrl, file.type, aiProvider, aiModel);
           
           if (!extractedMarkdown.trim()) {
             throw new Error('AI gagal mengekstrak konten terstruktur dari berkas.', { cause: localErr });
@@ -736,7 +736,7 @@ export default function MemexJournal() {
           reader.readAsDataURL(file);
         });
 
-        const extractedMarkdown = await extractDocumentToMarkdown(apiKey, dataUrl, file.type, aiModel);
+        const extractedMarkdown = await extractDocumentToMarkdown(apiKey, dataUrl, file.type, aiProvider, aiModel);
         
         if (!extractedMarkdown.trim()) {
           throw new Error('AI gagal mengekstrak konten terstruktur dari gambar.');
@@ -923,8 +923,8 @@ export default function MemexJournal() {
         const fileExt = currentFile.name.split('.').pop().toLowerCase();
         const isTxt = ['txt', 'md', 'json'].includes(fileExt) || currentFile.type === 'text/plain' || currentFile.type === 'application/json';
 
-        if (!isTxt && aiProvider !== 'gemini') {
-          alert('Ekstraksi berkas gambar atau PDF saat ini hanya didukung untuk model Gemini. Silakan ubah provider Anda ke Gemini di halaman Pengaturan.');
+        if (!isTxt && aiProvider !== 'gemini' && aiProvider !== 'qodirsai') {
+          alert('Ekstraksi berkas gambar atau PDF saat ini hanya didukung untuk model Gemini atau Server Proxy. Silakan ubah provider Anda di halaman Pengaturan.');
           setLoadingChat(false);
           return;
         }
@@ -940,7 +940,7 @@ export default function MemexJournal() {
           const combinedText = `Isi Dokumen (${currentFile.name}):\n${fileTextContent}\n\nCatatan Tambahan Pengguna:\n${userMsg}`;
           result = await extractMemexCard(apiKey, combinedText, aiProvider, aiModel);
         } else {
-          result = await extractMemexCardWithMultimodal(apiKey, currentDataUrl, userMsg, aiModel);
+          result = await extractMemexCardWithMultimodal(apiKey, currentDataUrl, userMsg, aiProvider, aiModel);
         }
 
         const newCard = {

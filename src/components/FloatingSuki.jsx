@@ -202,8 +202,8 @@ export default function FloatingSuki() {
         const fileExt = currentFile.name.split('.').pop().toLowerCase();
         const isTxt = ['txt', 'md', 'json'].includes(fileExt) || currentFile.type === 'text/plain' || currentFile.type === 'application/json';
 
-        if (!isTxt && aiProvider !== 'gemini') {
-          alert('Ekstraksi berkas gambar atau PDF saat ini hanya didukung untuk model Gemini. Silakan ubah provider Anda ke Gemini di halaman Pengaturan.');
+        if (!isTxt && aiProvider !== 'gemini' && aiProvider !== 'qodirsai') {
+          alert('Ekstraksi berkas gambar atau PDF saat ini hanya didukung untuk model Gemini atau Server Proxy. Silakan ubah provider Anda di halaman Pengaturan.');
           setLoadingChat(false);
           return;
         }
@@ -219,7 +219,7 @@ export default function FloatingSuki() {
           const combinedText = `Isi Dokumen (${currentFile.name}):\n${fileTextContent}\n\nCatatan Tambahan Pengguna:\n${userMsg}`;
           result = await extractMemexCard(apiKey, combinedText, aiProvider, aiModel);
         } else {
-          result = await extractMemexCardWithMultimodal(apiKey, currentDataUrl, userMsg, aiModel);
+          result = await extractMemexCardWithMultimodal(apiKey, currentDataUrl, userMsg, aiProvider, aiModel);
         }
 
         const newCard = {

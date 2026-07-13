@@ -31,12 +31,12 @@ exports.handler = async (event, context) => {
     };
   }
 
-  const { prompt, model = 'gemini-1.5-flash-latest' } = body;
-  if (!prompt) {
+  const { prompt, model = 'gemini-1.5-flash-latest', contents } = body;
+  if (!prompt && !contents) {
     return {
       statusCode: 400,
       headers,
-      body: JSON.stringify({ message: 'Prompt is required' })
+      body: JSON.stringify({ message: 'Prompt or contents is required' })
     };
   }
 
@@ -66,7 +66,7 @@ exports.handler = async (event, context) => {
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${activeKey}`;
 
     const payload = {
-      contents: [{
+      contents: contents || [{
         parts: [{ text: prompt }]
       }]
     };
