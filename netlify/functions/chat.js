@@ -72,11 +72,24 @@ exports.handler = async (event, context) => {
     };
 
     try {
-      const response = await fetch(endpoint, {
+      let response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
+
+      // Jika gagal dan modelnya 2.5/2.0, coba fallback ke gemini-1.5-flash
+      if (!response.ok && (model.includes('2.5') || model.includes('2.0') || model.includes('gemini-2.'))) {
+        const fallbackModel = 'gemini-1.5-flash';
+        const fallbackEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${fallbackModel}:generateContent?key=${activeKey}`;
+        console.warn(`Model ${model} failed, attempting fallback to ${fallbackModel}...`);
+        
+        response = await fetch(fallbackEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));

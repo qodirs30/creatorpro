@@ -51,7 +51,8 @@ async function generateQodirsAi(prompt, model, contents = null) {
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err.message || 'Gagal memproses dengan qodirsAi Server Proxy.');
+    const detail = err.error ? ` - ${err.error}` : '';
+    throw new Error((err.message || 'Gagal memproses dengan qodirsAi Server Proxy.') + detail);
   }
 
   const data = await response.json();
