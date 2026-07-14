@@ -165,12 +165,12 @@ function AppLayout() {
     }
   }, [navigate]);
 
-  // Register Service Worker for Push Notifications
+  // Register Service Worker for PWA & Push Notifications
   useEffect(() => {
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
+    if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js')
         .then(reg => {
-          console.log('Service Worker registered successfully for Web Push:', reg.scope);
+          console.log('Service Worker registered successfully:', reg.scope);
         })
         .catch(err => {
           console.error('Service Worker registration failed:', err);
