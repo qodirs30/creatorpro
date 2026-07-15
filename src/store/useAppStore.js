@@ -204,7 +204,7 @@ const useAppStore = create(
         openAiKey: data.openAiKey || '',
         klingAccessKey: data.klingAccessKey || '',
         klingSecretKey: data.klingSecretKey || '',
-        aiProvider: (data.aiProvider && data.aiProvider !== 'gemini') ? data.aiProvider : 'qodirsai',
+        aiProvider: data.aiProvider || 'qodirsai',
         aiModel: data.aiModel || 'gemini-2.5-flash',
         enablePinLock: data.enablePinLock ?? false,
         pin: data.pin || '1234',
