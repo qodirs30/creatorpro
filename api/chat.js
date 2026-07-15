@@ -14,7 +14,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { prompt, model = 'gemini-1.5-flash-latest', contents } = req.body;
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (e) {
+      // ignore
+    }
+  }
+  const { prompt, model = 'gemini-1.5-flash-latest', contents } = body || {};
   if (!prompt && !contents) {
     return res.status(400).json({ message: 'Prompt or contents is required' });
   }
