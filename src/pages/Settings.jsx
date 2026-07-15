@@ -343,32 +343,12 @@ export default function Settings() {
     setProxyStatus('Menghubungkan ke Proxy...');
     try {
       const startTime = performance.now();
-      let endpoint = '/.netlify/functions/chat';
-      let response;
-      let isNetlify = true;
-
-      try {
-        response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: 'Say: Proxy Active', model: 'gemini-1.5-flash' })
-        });
-        if (!response.ok) {
-          isNetlify = false;
-        }
-      } catch (err) {
-        isNetlify = false;
-      }
-
-      if (!isNetlify) {
-        endpoint = '/api/chat';
-        response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: 'Say: Proxy Active', model: 'gemini-1.5-flash' })
-        });
-      }
-
+      const endpoint = '/api/chat';
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: 'Say: Proxy Active', model: 'gemini-1.5-flash' })
+      });
       const latency = Math.round(performance.now() - startTime);
 
       if (response.ok) {
