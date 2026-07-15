@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       // ignore
     }
   }
-  const { prompt, model = 'gemini-1.5-flash-latest', contents } = body || {};
+  const { prompt, model = 'gemini-1.5-flash', contents } = body || {};
   if (!prompt && !contents) {
     return res.status(400).json({ message: 'Prompt or contents is required' });
   }

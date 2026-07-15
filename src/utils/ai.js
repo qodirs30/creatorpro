@@ -1,4 +1,4 @@
-export async function generateContent(apiKeysString, prompt, provider = 'gemini', model = 'gemini-1.5-flash-latest') {
+export async function generateContent(apiKeysString, prompt, provider = 'gemini', model = 'gemini-1.5-flash') {
   if (provider === 'qodirsai') {
     return await generateQodirsAi(prompt, model);
   }

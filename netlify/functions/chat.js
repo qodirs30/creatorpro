@@ -31,7 +31,7 @@ exports.handler = async (event, context) => {
     };
   }
 
-  const { prompt, model = 'gemini-1.5-flash-latest', contents } = body;
+  const { prompt, model = 'gemini-1.5-flash', contents } = body;
   if (!prompt && !contents) {
     return {
       statusCode: 400,

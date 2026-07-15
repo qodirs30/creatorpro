@@ -351,7 +351,7 @@ export default function Settings() {
         response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: 'Say: Proxy Active', model: 'gemini-1.5-flash-latest' })
+          body: JSON.stringify({ prompt: 'Say: Proxy Active', model: 'gemini-1.5-flash' })
         });
         if (!response.ok) {
           isNetlify = false;
@@ -365,7 +365,7 @@ export default function Settings() {
         response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: 'Say: Proxy Active', model: 'gemini-1.5-flash-latest' })
+          body: JSON.stringify({ prompt: 'Say: Proxy Active', model: 'gemini-1.5-flash' })
         });
       }
 
