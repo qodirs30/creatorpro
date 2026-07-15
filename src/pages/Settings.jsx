@@ -7,6 +7,17 @@ import {
   sendPasswordReset 
 } from '../utils/firebase';
 
+const textProviders = {
+  qodirsai: {
+    name: 'qodirsAi Proxy',
+    tag: 'Gratis & Tanpa API Key (Rekomendasi)',
+    models: [
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Default)' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' }
+    ]
+  }
+};
+
 export default function Settings() {
   const { 
     geminiKey, setGeminiKey, 
@@ -34,8 +45,13 @@ export default function Settings() {
   const [localKlingAccess, setLocalKlingAccess] = useState(klingAccessKey);
   const [localKlingSecret, setLocalKlingSecret] = useState(klingSecretKey);
   
-  const [localProvider, setLocalProvider] = useState(aiProvider || 'gemini');
-  const [localModel, setLocalModel] = useState(aiModel || 'gemini-2.5-flash');
+  const [localProvider, setLocalProvider] = useState(textProviders[aiProvider] ? aiProvider : 'qodirsai');
+  const [localModel, setLocalModel] = useState(() => {
+    const prov = textProviders[aiProvider] ? aiProvider : 'qodirsai';
+    const models = textProviders[prov].models;
+    const found = models.find(m => m.id === aiModel);
+    return found ? aiModel : models[0].id;
+  });
   const [localEnablePinLock, setLocalEnablePinLock] = useState(enablePinLock);
   const [localPin, setLocalPin] = useState(pin);
   const [saved, setSaved] = useState(false);
@@ -141,16 +157,7 @@ export default function Settings() {
     reader.readAsText(file);
   };
 
-  const textProviders = {
-    qodirsai: {
-      name: 'qodirsAi Proxy',
-      tag: 'Gratis & Tanpa API Key (Rekomendasi)',
-      models: [
-        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Default)' },
-        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' }
-      ]
-    }
-  };
+  // textProviders didefinisikan secara global di bagian atas file
 
   const handleProviderChange = (e) => {
     const newProv = e.target.value;
