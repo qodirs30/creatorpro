@@ -319,11 +319,32 @@ export default function Settings() {
     setProxyStatus('Menghubungkan ke Proxy...');
     try {
       const startTime = performance.now();
-      const response = await fetch('/.netlify/functions/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: 'Say: Proxy Active', model: 'gemini-1.5-flash-latest' })
-      });
+      let endpoint = '/.netlify/functions/chat';
+      let response;
+      let isNetlify = true;
+
+      try {
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: 'Say: Proxy Active', model: 'gemini-1.5-flash-latest' })
+        });
+        if (response.status === 404) {
+          isNetlify = false;
+        }
+      } catch (err) {
+        isNetlify = false;
+      }
+
+      if (!isNetlify) {
+        endpoint = '/api/chat';
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: 'Say: Proxy Active', model: 'gemini-1.5-flash-latest' })
+        });
+      }
+
       const latency = Math.round(performance.now() - startTime);
 
       if (response.ok) {
@@ -331,7 +352,8 @@ export default function Settings() {
         setProxyStatus(`Sukses! Latency: ${latency}ms`);
       } else {
         const err = await response.json().catch(() => ({}));
-        setProxyStatus(`Gagal: ${err.message || 'HTTP ' + response.status}`);
+        const detail = err.error ? ` - ${err.error}` : '';
+        setProxyStatus(`Gagal: ${(err.message || 'HTTP ' + response.status) + detail}`);
       }
     } catch (err) {
       setProxyStatus(`Gagal terhubung: ${err.message}`);
