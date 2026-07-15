@@ -353,7 +353,7 @@ export default function Settings() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: 'Say: Proxy Active', model: 'gemini-1.5-flash-latest' })
         });
-        if (response.status === 404) {
+        if (!response.ok) {
           isNetlify = false;
         }
       } catch (err) {

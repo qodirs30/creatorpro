@@ -51,7 +51,7 @@ async function generateQodirsAi(prompt, model, contents = null) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, model, contents })
     });
-    if (response.status === 404) {
+    if (!response.ok) {
       isNetlify = false;
     }
   } catch (err) {
