@@ -13,7 +13,10 @@ const textProviders = {
     tag: 'Gratis & Tanpa API Key (Rekomendasi)',
     models: [
       { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Default)' },
-      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' }
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Lebih Pintar)' },
+      { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash (Eksperimental)' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Hemat)' },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Mendalam)' }
     ]
   },
   gemini: {
@@ -21,9 +24,20 @@ const textProviders = {
     tag: 'Pakai Key Pribadi',
     models: [
       { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Super Cepat)' },
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Lebih Pintar)' }
+      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Lebih Pintar)' },
+      { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash (Eksperimental)' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Stabil)' },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Mendalam)' }
     ]
   }
+};
+
+const modelDescriptions = {
+  'gemini-2.5-flash': 'Model default terbaru. Kecepatan sangat tinggi, hemat kuota, dan optimal untuk tugas penulisan naskah harian serta analisis cepat.',
+  'gemini-2.5-pro': 'Model premium. Memiliki penalaran (reasoning) yang jauh lebih pintar, sangat baik untuk pemecahan masalah rumit, logika tingkat tinggi, dan coding.',
+  'gemini-2.0-flash-exp': 'Model eksperimental generasi 2.0. Responsif, kreatif, dan memiliki gaya interaksi percakapan yang lebih dinamis.',
+  'gemini-1.5-flash': 'Model stabil yang tangguh, hemat sumber daya, dan handal untuk pemrosesan teks umum.',
+  'gemini-1.5-pro': 'Model penalaran mendalam yang stabil untuk pemrosesan teks yang sangat panjang.'
 };
 
 export default function Settings() {
@@ -65,6 +79,8 @@ export default function Settings() {
   const [saved, setSaved] = useState(false);
   const [proxyTesting, setProxyTesting] = useState(false);
   const [proxyStatus, setProxyStatus] = useState('');
+  const [geminiTesting, setGeminiTesting] = useState(false);
+  const [geminiStatus, setGeminiStatus] = useState('');
 
   // State Profil Firebase
   const [profileName, setProfileName] = useState(firebaseUser?.displayName || '');
@@ -369,6 +385,38 @@ export default function Settings() {
       setProxyTesting(false);
     }
   };
+
+  const handleTestGeminiKey = async () => {
+    const key = localGemini[0]?.trim();
+    if (!key) {
+      setGeminiStatus('Gagal: API Key kosong.');
+      return;
+    }
+    setGeminiTesting(true);
+    setGeminiStatus('Menghubungkan ke Gemini...');
+    try {
+      const startTime = performance.now();
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: 'Hi' }] }] })
+      });
+      const latency = Math.round(performance.now() - startTime);
+
+      if (response.ok) {
+        setGeminiStatus(`Sukses! Latency: ${latency}ms`);
+      } else {
+        const err = await response.json().catch(() => ({}));
+        setGeminiStatus(`Gagal: ${err.error?.message || 'HTTP ' + response.status}`);
+      }
+    } catch (err) {
+      setGeminiStatus(`Gagal terhubung: ${err.message}`);
+    } finally {
+      setGeminiTesting(false);
+    }
+  };
+
 
   const renderKeySection = (provider, title, keysList, helpText, getUrl) => {
     return (
@@ -707,6 +755,11 @@ export default function Settings() {
               <option key={model.id} value={model.id}>{model.name}</option>
             ))}
           </select>
+          {modelDescriptions[localModel] && (
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.5rem', lineHeight: 1.4, padding: '0.5rem 0.75rem', backgroundColor: 'var(--bg-main)', borderRadius: '6px', borderLeft: '3px solid var(--primary)' }}>
+              💡 <strong>Keterangan:</strong> {modelDescriptions[localModel]}
+            </p>
+          )}
           {localProvider === 'qodirsai' && (
             <button
               type="button"
@@ -869,6 +922,16 @@ export default function Settings() {
           <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
             Hanya diperlukan jika Anda memilih provider "Google Gemini (Pakai Key Pribadi)" di atas.
           </p>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleTestGeminiKey}
+            disabled={geminiTesting}
+            style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.85rem', width: 'auto' }}
+          >
+            <RefreshCw size={14} className={geminiTesting ? 'animate-spin' : ''} />
+            {geminiStatus || 'Tes Koneksi API'}
+          </button>
         </div>
 
       </div>
