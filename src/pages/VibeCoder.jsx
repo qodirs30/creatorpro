@@ -1450,7 +1450,24 @@ Pastikan isi setiap bagian ditulis dalam bahasa Indonesia yang profesional (kecu
   };
 
   const fetchHtmlWithFallbackProxies = async (url) => {
-    // List of free public CORS proxies
+    // 1. Coba gunakan Jina Reader API (Bypass Cloudflare, output markdown bersih ramah AI)
+    try {
+      console.log(`Trying Jina Reader API for URL: ${url}`);
+      const response = await fetch(`https://r.jina.ai/${url}`);
+      if (response.ok) {
+        const text = await response.text();
+        if (text && text.trim().length > 100) {
+          console.log("Successfully scraped using Jina Reader API!");
+          return text;
+        }
+      } else {
+        console.warn(`Jina Reader API returned status ${response.status}`);
+      }
+    } catch (err) {
+      console.warn('Jina Reader API failed, falling back to CORS proxies:', err.message);
+    }
+
+    // 2. Fallback ke CORS Proxies jika Jina gagal
     const proxies = [
       (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
       (u) => `https://api.codetabs.com/v1/proxy?quest=${u}`,
