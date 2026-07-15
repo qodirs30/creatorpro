@@ -204,6 +204,7 @@ Tulis dengan gaya kasual profesional, suportif, dan edukatif dalam Bahasa Indone
   };
 
   const getApiKey = () => {
+    if (aiProvider === 'qodirsai') return 'qodirsai';
     if (aiProvider === 'gemini') return geminiKey;
     if (aiProvider === 'groq') return groqKey;
     if (aiProvider === 'openai') return openAiKey;

@@ -7,6 +7,7 @@ import jsPDF from 'jspdf';
 export default function ContentScripting() {
   const { geminiKey, groqKey, openAiKey, aiProvider, aiModel, addHistory } = useAppStore();
   const getActiveKey = () => {
+    if (aiProvider === 'qodirsai') return 'qodirsai';
     if (aiProvider === 'gemini') return geminiKey;
     if (aiProvider === 'groq') return groqKey;
     if (aiProvider === 'openai') return openAiKey;

@@ -68,6 +68,7 @@ export default function MegaCreator() {
   const recordingTimerRef = useRef(null);
 
   const getApiKey = () => {
+    if (aiProvider === 'qodirsai') return 'qodirsai';
     if (aiProvider === 'gemini') return geminiKey;
     if (aiProvider === 'groq') return groqKey;
     if (aiProvider === 'openai') return openAiKey;
