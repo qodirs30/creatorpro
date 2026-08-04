@@ -819,7 +819,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
   });
 
   return (
-    <div className="page-container" style={{ padding: '2rem 1.5rem', maxWidth: '1400px', margin: '0 auto', overflowY: 'auto', height: '100%' }}>
+    <div className="page-container" style={{ maxWidth: '1400px', margin: '0 auto', height: '100%' }}>
       {/* Header */}
       <div className="page-header flex-between flex-wrap gap-2" style={{ marginBottom: '1.5rem' }}>
         <div>
@@ -2195,6 +2195,17 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
 
       {/* Custom Styles */}
       <style>{`
+        .page-container {
+          padding: 2rem 1.5rem;
+          overflow-y: auto;
+          overflow-x: hidden;
+          width: 100%;
+        }
+        @media (max-width: 768px) {
+          .page-container {
+            padding: 1rem 0.5rem !important;
+          }
+        }
         .donut-svg {
           transform: rotate(-90deg);
         }
