@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   TrendingUp, TrendingDown, DollarSign, Plus, Trash2, 
   Search, Filter, Sparkles, AlertTriangle, Calendar, 
@@ -16,7 +16,8 @@ export default function NeracaKeuangan() {
     groqKey,
     openAiKey,
     aiProvider,
-    aiModel 
+    aiModel,
+    memexCards = []
   } = useAppStore();
 
   const getApiKey = () => {
@@ -32,6 +33,34 @@ export default function NeracaKeuangan() {
   const [category, setCategory] = useState('Makanan');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
+
+  // Jalankan migrasi satu kali ketika halaman dimuat
+  useEffect(() => {
+    const transactionsFromMemex = memexCards.filter(c => c.type === 'transaction');
+    if (transactionsFromMemex.length === 0) return;
+
+    transactionsFromMemex.forEach(c => {
+      // Periksa apakah transaksi ini sudah dimigrasi ke financialEntries
+      const isAlreadyMigrated = financialEntries.some(e => 
+        e.id === c.id || 
+        (e.description === c.title && 
+         e.amount === Number(c.data?.amount || 0) && 
+         e.date === (c.data?.date || new Date(c.createdAt).toISOString().split('T')[0]))
+      );
+
+      if (!isAlreadyMigrated) {
+        addFinancialEntry({
+          id: c.id, // Pertahankan ID asli
+          type: c.data?.type || 'expense',
+          category: c.data?.category || 'Lainnya',
+          amount: Number(c.data?.amount || 0),
+          date: c.data?.date || new Date(c.createdAt).toISOString().split('T')[0],
+          description: c.title || c.data?.summary || 'Transaksi Migrasi',
+          createdAt: c.createdAt || new Date().toISOString()
+        });
+      }
+    });
+  }, [memexCards, financialEntries, addFinancialEntry]);
 
   // Filtering / Search States
   const [searchTerm, setSearchTerm] = useState('');
@@ -268,8 +297,8 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
           {/* Form Pencatatan Cepat */}
           <div className="section-card glass-panel p-4">
             <h3 className="section-title mb-3">Catat Transaksi Baru</h3>
-            <form onSubmit={handleSubmit} className="flex-column gap-2">
-              <div className="auth-tabs-container">
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="auth-tabs-container" style={{ marginBottom: '0.5rem' }}>
                 <div 
                   className="auth-tab-active-pill" 
                   style={{
@@ -293,24 +322,27 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                 </button>
               </div>
 
-              <div className="form-group">
-                <label>Nominal (Rupiah)</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Nominal (Rupiah)</label>
                 <input
                   type="number"
+                  className="input-field"
                   required
                   placeholder="Masukkan jumlah uang..."
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  style={{ fontSize: '1.15rem', fontWeight: 600 }}
+                  style={{ fontSize: '1.1rem', fontWeight: 600 }}
                 />
               </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Kategori</label>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Kategori</label>
                   <select 
+                    className="input-field"
                     value={category} 
                     onChange={(e) => setCategory(e.target.value)}
+                    style={{ height: '45px' }}
                   >
                     {categories[type].map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
@@ -318,28 +350,31 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                   </select>
                 </div>
 
-                <div className="form-group">
-                  <label>Tanggal</label>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Tanggal</label>
                   <input
                     type="date"
+                    className="input-field"
                     required
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
+                    style={{ height: '45px' }}
                   />
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Deskripsi / Catatan (Opsional)</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Deskripsi / Catatan (Opsional)</label>
                 <input
                   type="text"
+                  className="input-field"
                   placeholder="Keperluan belanja bulanan, jajan boba, dll..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary w-full mt-2">
+              <button type="submit" className="btn btn-primary w-full mt-2" style={{ padding: '0.85rem' }}>
                 <Plus size={18} /> Tambah Transaksi
               </button>
             </form>
