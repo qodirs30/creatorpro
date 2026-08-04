@@ -1101,7 +1101,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                     />
                   </div>
 
-                  <div style={{ display: 'flex', gap: '1rem' }}>
+                  <div className="form-row-responsive">
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                       <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Kategori</label>
                       <select 
@@ -1726,7 +1726,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                 <p className="text-xs text-muted mb-4">Set batas maksimal belanja Anda per kategori. Progress bar akan berubah warna jika pengeluaran melampaui batas target.</p>
                 
                 {/* Form targets */}
-                <form onSubmit={handleBudgetSubmit} style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                <form onSubmit={handleBudgetSubmit} className="form-row-responsive" style={{ marginBottom: '1.5rem' }}>
                   <select 
                     className="input-field text-sm"
                     style={{ flex: 1, minWidth: '130px', height: '40px' }}
@@ -1797,7 +1797,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
 
                 {/* Form saving goal */}
                 <form onSubmit={handleGoalSubmit} className="flex-column gap-2" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div className="form-row-responsive">
                     <input
                       type="text"
                       className="input-field text-sm"
@@ -1817,7 +1817,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                       required
                     />
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div className="form-row-responsive">
                     <input
                       type="number"
                       className="input-field text-sm"
@@ -1916,7 +1916,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                 <p className="text-xs text-muted mb-4">Catat biaya langganan bulanan atau tagihan cicilan Anda untuk menghindari denda keterlambatan.</p>
 
                 {/* Form bills */}
-                <form onSubmit={handleBillSubmit} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+                <form onSubmit={handleBillSubmit} className="form-row-responsive" style={{ marginBottom: '1.5rem' }}>
                   <input
                     type="text"
                     className="input-field text-sm"
@@ -1997,7 +1997,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
 
                 {/* Form debts */}
                 <form onSubmit={handleDebtSubmit} className="flex-column gap-2" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div className="form-row-responsive">
                     <input
                       type="text"
                       className="input-field text-sm"
@@ -2017,7 +2017,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                       required
                     />
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div className="form-row-responsive">
                     <select 
                       className="input-field text-sm"
                       style={{ flex: 1, minWidth: '110px' }}
@@ -2103,7 +2103,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
 
                 {/* Form wallets */}
                 <form onSubmit={handleWalletSubmit} className="flex-column gap-2" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div className="form-row-responsive">
                     <input
                       type="text"
                       className="input-field text-sm"
@@ -2123,7 +2123,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                       required
                     />
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div className="form-row-responsive">
                     <select 
                       className="input-field text-sm"
                       style={{ flex: 1 }}
@@ -2279,6 +2279,21 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
         @media (max-width: 768px) {
           .page-container {
             padding: 1rem 0.5rem !important;
+          }
+        }
+        .form-row-responsive {
+          display: flex;
+          gap: 0.75rem;
+          width: 100%;
+        }
+        @media (max-width: 580px) {
+          .form-row-responsive {
+            flex-direction: column !important;
+            gap: 0.65rem !important;
+          }
+          .form-row-responsive > * {
+            width: 100% !important;
+            min-width: 0 !important;
           }
         }
         .desktop-only-table {
