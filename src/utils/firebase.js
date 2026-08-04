@@ -87,6 +87,11 @@ export async function uploadBackupToDatabase(uid, data) {
   // Clean data to prevent undefined errors in Firebase
   const cleanData = {
     financialEntries: data.financialEntries || [],
+    financialBudgets: data.financialBudgets || {},
+    financialGoals: data.financialGoals || [],
+    recurringBills: data.recurringBills || [],
+    debts: data.debts || [],
+    wallets: data.wallets || [],
     memexCards: data.memexCards || [],
     habits: data.habits || [],
     scripts: data.scripts || [],

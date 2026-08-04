@@ -124,6 +124,12 @@ const useAppStore = create(
 
       // ================= NERACA KEUANGAN =================
       financialEntries: [],
+      financialBudgets: {}, // { Kategori: nominal }
+      financialGoals: [], // { id, name, target, current, deadline }
+      recurringBills: [], // { id, name, amount, dueDate, isPaid }
+      debts: [], // { id, description, amount, type: 'owe'|'lend', dueDate, isResolved }
+      wallets: [], // { id, name, balance, type: 'cash'|'bank'|'e-wallet'|'investment' }
+
       addFinancialEntry: (entry) => set((state) => ({
         financialEntries: [
           {
@@ -148,6 +154,60 @@ const useAppStore = create(
         memexCards: state.memexCards.filter(c => String(c.id) !== String(id))
       })),
       clearFinancialEntries: () => set({ financialEntries: [] }),
+
+      setFinancialBudgets: (budgets) => set({ financialBudgets: budgets }),
+      
+      addFinancialGoal: (goal) => set((state) => ({
+        financialGoals: [
+          { id: Date.now().toString(), createdAt: new Date().toISOString(), ...goal },
+          ...state.financialGoals
+        ]
+      })),
+      updateFinancialGoal: (id, updates) => set((state) => ({
+        financialGoals: state.financialGoals.map(g => g.id === id ? { ...g, ...updates } : g)
+      })),
+      deleteFinancialGoal: (id) => set((state) => ({
+        financialGoals: state.financialGoals.filter(g => g.id !== id)
+      })),
+
+      addRecurringBill: (bill) => set((state) => ({
+        recurringBills: [
+          { id: Date.now().toString(), createdAt: new Date().toISOString(), isPaid: false, ...bill },
+          ...state.recurringBills
+        ]
+      })),
+      updateRecurringBill: (id, updates) => set((state) => ({
+        recurringBills: state.recurringBills.map(b => b.id === id ? { ...b, ...updates } : b)
+      })),
+      deleteRecurringBill: (id) => set((state) => ({
+        recurringBills: state.recurringBills.filter(b => b.id !== id)
+      })),
+
+      addDebt: (debt) => set((state) => ({
+        debts: [
+          { id: Date.now().toString(), createdAt: new Date().toISOString(), isResolved: false, ...debt },
+          ...state.debts
+        ]
+      })),
+      updateDebt: (id, updates) => set((state) => ({
+        debts: state.debts.map(d => d.id === id ? { ...d, ...updates } : d)
+      })),
+      deleteDebt: (id) => set((state) => ({
+        debts: state.debts.filter(d => d.id !== id)
+      })),
+
+      addWallet: (wallet) => set((state) => ({
+        wallets: [
+          { id: Date.now().toString(), createdAt: new Date().toISOString(), ...wallet },
+          ...state.wallets
+        ]
+      })),
+      updateWallet: (id, updates) => set((state) => ({
+        wallets: state.wallets.map(w => w.id === id ? { ...w, ...updates } : w)
+      })),
+      deleteWallet: (id) => set((state) => ({
+        wallets: state.wallets.filter(w => w.id !== id)
+      })),
 
       // ================= MEMEX JOURNAL & COMPANION =================
       memexCards: [],
@@ -218,6 +278,11 @@ const useAppStore = create(
       clearHistory: () => set({ history: [] }),
       restoreBackup: (data) => set({
         financialEntries: data.financialEntries || [],
+        financialBudgets: data.financialBudgets || {},
+        financialGoals: data.financialGoals || [],
+        recurringBills: data.recurringBills || [],
+        debts: data.debts || [],
+        wallets: data.wallets || [],
         memexCards: data.memexCards || [],
         habits: data.habits || [],
         scripts: data.scripts || [],

@@ -258,6 +258,11 @@ function AppLayout() {
     // Initialize lastStateRef with current values
     lastStateRef.current = {
       financialEntries: useAppStore.getState().financialEntries || [],
+      financialBudgets: useAppStore.getState().financialBudgets || {},
+      financialGoals: useAppStore.getState().financialGoals || [],
+      recurringBills: useAppStore.getState().recurringBills || [],
+      debts: useAppStore.getState().debts || [],
+      wallets: useAppStore.getState().wallets || [],
       memexCards: useAppStore.getState().memexCards || [],
       habits: useAppStore.getState().habits || [],
       scripts: useAppStore.getState().scripts || [],
@@ -280,7 +285,8 @@ function AppLayout() {
     let timeoutId;
     const unsubscribe = useAppStore.subscribe((state) => {
       const keysToCheck = [
-        'financialEntries', 'memexCards', 'habits', 'scripts', 'socialPosts', 'counters', 'activityLog', 'history', 'sukiKnowledge', 'memexChats',
+        'financialEntries', 'financialBudgets', 'financialGoals', 'recurringBills', 'debts', 'wallets', 
+        'memexCards', 'habits', 'scripts', 'socialPosts', 'counters', 'activityLog', 'history', 'sukiKnowledge', 'memexChats',
         'geminiKey', 'groqKey', 'openAiKey', 'klingAccessKey', 'klingSecretKey', 'aiProvider', 'aiModel', 'enablePinLock', 'pin'
       ];
       const hasChanged = keysToCheck.some(key => state[key] !== lastStateRef.current[key]);
@@ -289,6 +295,11 @@ function AppLayout() {
         // Update ref
         lastStateRef.current = {
           financialEntries: state.financialEntries || [],
+          financialBudgets: state.financialBudgets || {},
+          financialGoals: state.financialGoals || [],
+          recurringBills: state.recurringBills || [],
+          debts: state.debts || [],
+          wallets: state.wallets || [],
           memexCards: state.memexCards || [],
           habits: state.habits || [],
           scripts: state.scripts || [],
@@ -544,6 +555,11 @@ function AuthGate({ children }) {
           const state = useAppStore.getState();
           const localData = {
             financialEntries: state.financialEntries || [],
+            financialBudgets: state.financialBudgets || {},
+            financialGoals: state.financialGoals || [],
+            recurringBills: state.recurringBills || [],
+            debts: state.debts || [],
+            wallets: state.wallets || [],
             memexCards: state.memexCards || [],
             habits: state.habits || [],
             scripts: state.scripts || [],

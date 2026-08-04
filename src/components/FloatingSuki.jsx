@@ -19,7 +19,13 @@ export default function FloatingSuki() {
     memexCompanion, sukiKnowledge, memexCards,
     geminiKey, groqKey, openAiKey,
     aiProvider, aiModel, addMemexCard,
-    habits, activityLog, updateMemexCard, deleteMemexCard, financialEntries
+    habits, activityLog, updateMemexCard, deleteMemexCard, financialEntries,
+    financialBudgets, financialGoals, recurringBills, debts, wallets,
+    setFinancialBudgets, addFinancialGoal, updateFinancialGoal, deleteFinancialGoal,
+    addRecurringBill, updateRecurringBill, deleteRecurringBill,
+    addDebt, updateDebt, deleteDebt,
+    addWallet, updateWallet, deleteWallet,
+    addFinancialEntry, deleteFinancialEntry
   } = useAppStore();
 
   const getApiKey = () => {
@@ -254,6 +260,22 @@ export default function FloatingSuki() {
             }
           }))
         ];
+        const financialStatusContext = `
+💰 DATA KEUANGAN TAMBAHAN:
+• Dompet/Akun Kas:
+  ${(wallets || []).map(w => `- [ID: ${w.id}] [${w.type.toUpperCase()}] ${w.name}: Rp ${w.balance.toLocaleString()}`).join('\n  ') || '- Belum ada dompet/akun.'}
+• Anggaran Kategori:
+  ${Object.entries(financialBudgets || {}).map(([cat, val]) => `- Kategori ${cat}: Target Rp ${val.toLocaleString()}`).join('\n  ') || '- Belum ada batas anggaran.'}
+• Target Keuangan (Goals):
+  ${(financialGoals || []).map(g => `- [ID: ${g.id}] ${g.name}: Terkumpul Rp ${g.current.toLocaleString()} / Target Rp ${g.target.toLocaleString()} (Progres: ${g.target > 0 ? Math.round((g.current / g.target) * 100) : 0}%)`).join('\n  ') || '- Belum ada target keuangan.'}
+• Tagihan Rutin (Recurring Bills):
+  ${(recurringBills || []).map(b => `- [ID: ${b.id}] [${b.isPaid ? 'LUNAS' : 'BELUM BAYAR'}] ${b.name}: Rp ${b.amount.toLocaleString()} (Jatuh Tempo: ${b.dueDate})`).join('\n  ') || '- Belum ada tagihan rutin.'}
+• Catatan Utang & Piutang:
+  ${(debts || []).map(d => `- [ID: ${d.id}] [${d.type === 'owe' ? 'UTANG' : 'PIUTANG'}] ${d.description}: Rp ${d.amount.toLocaleString()} (Jatuh Tempo: ${d.dueDate}, Status: ${d.isResolved ? 'Selesai' : 'Belum Selesai'})`).join('\n  ') || '- Belum ada catatan utang/piutang.'}
+`;
+
+        const combinedKnowledge = `${sukiKnowledge?.content || ''}\n\n${financialStatusContext}`;
+
         const reply = await generateCompanionChat(
           apiKey,
           memexCompanion,
@@ -262,7 +284,7 @@ export default function FloatingSuki() {
           userMsg,
           aiProvider,
           aiModel,
-          sukiKnowledge?.content || '',
+          combinedKnowledge,
           habits,
           activityLog
         );
@@ -328,11 +350,277 @@ export default function FloatingSuki() {
           }
         }
 
+        // 4. Proses record_budget
+        const budgetRegex = /<record_budget>([\s\S]*?)<\/record_budget>/g;
+        let budgetMatch;
+        while ((budgetMatch = budgetRegex.exec(reply)) !== null) {
+          try {
+            const budgetObj = safeJsonParse(budgetMatch[1].trim());
+            if (budgetObj && budgetObj.category && budgetObj.amount !== undefined) {
+              setFinancialBudgets({ ...financialBudgets, [budgetObj.category]: Number(budgetObj.amount) });
+            }
+          } catch (e) {
+            console.error("Gagal parse record_budget:", e);
+          }
+        }
+
+        // 5. Proses delete_budget
+        const deleteBudgetRegex = /<delete_budget>([\s\S]*?)<\/delete_budget>/g;
+        let deleteBudgetMatch;
+        while ((deleteBudgetMatch = deleteBudgetRegex.exec(reply)) !== null) {
+          try {
+            const budgetObj = safeJsonParse(deleteBudgetMatch[1].trim());
+            if (budgetObj && budgetObj.category) {
+              const updatedBudgets = { ...financialBudgets };
+              delete updatedBudgets[budgetObj.category];
+              setFinancialBudgets(updatedBudgets);
+            }
+          } catch (e) {
+            console.error("Gagal parse delete_budget:", e);
+          }
+        }
+
+        // 6. Proses record_goal
+        const goalRegex = /<record_goal>([\s\S]*?)<\/record_goal>/g;
+        let goalMatch;
+        while ((goalMatch = goalRegex.exec(reply)) !== null) {
+          try {
+            const goalObj = safeJsonParse(goalMatch[1].trim());
+            if (goalObj) {
+              addFinancialGoal({
+                name: goalObj.name || 'Target Keuangan Baru',
+                target: Number(goalObj.target || 0),
+                current: Number(goalObj.current || 0),
+                deadline: goalObj.deadline || new Date().toISOString().split('T')[0]
+              });
+            }
+          } catch (e) {
+            console.error("Gagal parse record_goal:", e);
+          }
+        }
+
+        // 7. Proses update_goal
+        const updateGoalRegex = /<update_goal>([\s\S]*?)<\/update_goal>/g;
+        let updateGoalMatch;
+        while ((updateGoalMatch = updateGoalRegex.exec(reply)) !== null) {
+          try {
+            const goalObj = safeJsonParse(updateGoalMatch[1].trim());
+            if (goalObj && goalObj.goalId) {
+              updateFinancialGoal(goalObj.goalId, goalObj.updates);
+            }
+          } catch (e) {
+            console.error("Gagal parse update_goal:", e);
+          }
+        }
+
+        // 8. Proses delete_goal
+        const deleteGoalRegex = /<delete_goal>([\s\S]*?)<\/delete_goal>/g;
+        let deleteGoalMatch;
+        while ((deleteGoalMatch = deleteGoalRegex.exec(reply)) !== null) {
+          try {
+            const goalObj = safeJsonParse(deleteGoalMatch[1].trim());
+            if (goalObj && goalObj.goalId) {
+              deleteFinancialGoal(goalObj.goalId);
+            }
+          } catch (e) {
+            console.error("Gagal parse delete_goal:", e);
+          }
+        }
+
+        // 9. Proses record_bill
+        const billRegex = /<record_bill>([\s\S]*?)<\/record_bill>/g;
+        let billMatch;
+        while ((billMatch = billRegex.exec(reply)) !== null) {
+          try {
+            const billObj = safeJsonParse(billMatch[1].trim());
+            if (billObj) {
+              addRecurringBill({
+                name: billObj.name || 'Tagihan Baru',
+                amount: Number(billObj.amount || 0),
+                dueDate: billObj.dueDate || new Date().toISOString().split('T')[0]
+              });
+            }
+          } catch (e) {
+            console.error("Gagal parse record_bill:", e);
+          }
+        }
+
+        // 10. Proses update_bill
+        const updateBillRegex = /<update_bill>([\s\S]*?)<\/update_bill>/g;
+        let updateBillMatch;
+        while ((updateBillMatch = updateBillRegex.exec(reply)) !== null) {
+          try {
+            const billObj = safeJsonParse(updateBillMatch[1].trim());
+            if (billObj && billObj.billId) {
+              updateRecurringBill(billObj.billId, billObj.updates);
+            }
+          } catch (e) {
+            console.error("Gagal parse update_bill:", e);
+          }
+        }
+
+        // 11. Proses delete_bill
+        const deleteBillRegex = /<delete_bill>([\s\S]*?)<\/delete_bill>/g;
+        let deleteBillMatch;
+        while ((deleteBillMatch = deleteBillRegex.exec(reply)) !== null) {
+          try {
+            const billObj = safeJsonParse(deleteBillMatch[1].trim());
+            if (billObj && billObj.billId) {
+              deleteRecurringBill(billObj.billId);
+            }
+          } catch (e) {
+            console.error("Gagal parse delete_bill:", e);
+          }
+        }
+
+        // 12. Proses record_debt
+        const debtRegex = /<record_debt>([\s\S]*?)<\/record_debt>/g;
+        let debtMatch;
+        while ((debtMatch = debtRegex.exec(reply)) !== null) {
+          try {
+            const debtObj = safeJsonParse(debtMatch[1].trim());
+            if (debtObj) {
+              addDebt({
+                description: debtObj.description || 'Catatan Utang/Piutang Baru',
+                amount: Number(debtObj.amount || 0),
+                type: debtObj.type || 'owe',
+                dueDate: debtObj.dueDate || new Date().toISOString().split('T')[0]
+              });
+            }
+          } catch (e) {
+            console.error("Gagal parse record_debt:", e);
+          }
+        }
+
+        // 13. Proses update_debt
+        const updateDebtRegex = /<update_debt>([\s\S]*?)<\/update_debt>/g;
+        let updateDebtMatch;
+        while ((updateDebtMatch = updateDebtRegex.exec(reply)) !== null) {
+          try {
+            const debtObj = safeJsonParse(updateDebtMatch[1].trim());
+            if (debtObj && debtObj.debtId) {
+              updateDebt(debtObj.debtId, debtObj.updates);
+            }
+          } catch (e) {
+            console.error("Gagal parse update_debt:", e);
+          }
+        }
+
+        // 14. Proses delete_debt
+        const deleteDebtRegex = /<delete_debt>([\s\S]*?)<\/delete_debt>/g;
+        let deleteDebtMatch;
+        while ((deleteDebtMatch = deleteDebtRegex.exec(reply)) !== null) {
+          try {
+            const debtObj = safeJsonParse(deleteDebtMatch[1].trim());
+            if (debtObj && debtObj.debtId) {
+              deleteDebt(debtObj.debtId);
+            }
+          } catch (e) {
+            console.error("Gagal parse delete_debt:", e);
+          }
+        }
+
+        // 15. Proses record_wallet
+        const walletRegex = /<record_wallet>([\s\S]*?)<\/record_wallet>/g;
+        let walletMatch;
+        while ((walletMatch = walletRegex.exec(reply)) !== null) {
+          try {
+            const walletObj = safeJsonParse(walletMatch[1].trim());
+            if (walletObj) {
+              addWallet({
+                name: walletObj.name || 'Dompet Baru',
+                balance: Number(walletObj.balance || 0),
+                type: walletObj.type || 'cash'
+              });
+            }
+          } catch (e) {
+            console.error("Gagal parse record_wallet:", e);
+          }
+        }
+
+        // 16. Proses update_wallet
+        const updateWalletRegex = /<update_wallet>([\s\S]*?)<\/update_wallet>/g;
+        let updateWalletMatch;
+        while ((updateWalletMatch = updateWalletRegex.exec(reply)) !== null) {
+          try {
+            const walletObj = safeJsonParse(updateWalletMatch[1].trim());
+            if (walletObj && walletObj.walletId) {
+              updateWallet(walletObj.walletId, walletObj.updates);
+            }
+          } catch (e) {
+            console.error("Gagal parse update_wallet:", e);
+          }
+        }
+
+        // 17. Proses delete_wallet
+        const deleteWalletRegex = /<delete_wallet>([\s\S]*?)<\/delete_wallet>/g;
+        let deleteWalletMatch;
+        while ((deleteWalletMatch = deleteWalletRegex.exec(reply)) !== null) {
+          try {
+            const walletObj = safeJsonParse(deleteWalletMatch[1].trim());
+            if (walletObj && walletObj.walletId) {
+              deleteWallet(walletObj.walletId);
+            }
+          } catch (e) {
+            console.error("Gagal parse delete_wallet:", e);
+          }
+        }
+
+        // 18. Proses record_entry (direct transaction)
+        const entryRegex = /<record_entry>([\s\S]*?)<\/record_entry>/g;
+        let entryMatch;
+        while ((entryMatch = entryRegex.exec(reply)) !== null) {
+          try {
+            const entryObj = safeJsonParse(entryMatch[1].trim());
+            if (entryObj) {
+              addFinancialEntry({
+                type: entryObj.type || 'expense',
+                category: entryObj.category || 'Lainnya',
+                amount: Number(entryObj.amount || 0),
+                date: entryObj.date || new Date().toISOString().split('T')[0],
+                description: entryObj.description || 'Transaksi AI'
+              });
+            }
+          } catch (e) {
+            console.error("Gagal parse record_entry:", e);
+          }
+        }
+
+        // 19. Proses delete_entry
+        const deleteEntryRegex = /<delete_entry>([\s\S]*?)<\/delete_entry>/g;
+        let deleteEntryMatch;
+        while ((deleteEntryMatch = deleteEntryRegex.exec(reply)) !== null) {
+          try {
+            const entryObj = safeJsonParse(deleteEntryMatch[1].trim());
+            if (entryObj && entryObj.entryId) {
+              deleteFinancialEntry(entryObj.entryId);
+            }
+          } catch (e) {
+            console.error("Gagal parse delete_entry:", e);
+          }
+        }
+
         // Bersihkan semua tag XML dari reply teks agar tidak muncul di chat bubble
         cleanReply = cleanReply
           .replace(/<record_card>[\s\S]*?<\/record_card>/g, '')
           .replace(/<update_card>[\s\S]*?<\/update_card>/g, '')
           .replace(/<delete_card>[\s\S]*?<\/delete_card>/g, '')
+          .replace(/<record_budget>[\s\S]*?<\/record_budget>/g, '')
+          .replace(/<delete_budget>[\s\S]*?<\/delete_budget>/g, '')
+          .replace(/<record_goal>[\s\S]*?<\/record_goal>/g, '')
+          .replace(/<update_goal>[\s\S]*?<\/update_goal>/g, '')
+          .replace(/<delete_goal>[\s\S]*?<\/delete_goal>/g, '')
+          .replace(/<record_bill>[\s\S]*?<\/record_bill>/g, '')
+          .replace(/<update_bill>[\s\S]*?<\/update_bill>/g, '')
+          .replace(/<delete_bill>[\s\S]*?<\/delete_bill>/g, '')
+          .replace(/<record_debt>[\s\S]*?<\/record_debt>/g, '')
+          .replace(/<update_debt>[\s\S]*?<\/update_debt>/g, '')
+          .replace(/<delete_debt>[\s\S]*?<\/delete_debt>/g, '')
+          .replace(/<record_wallet>[\s\S]*?<\/record_wallet>/g, '')
+          .replace(/<update_wallet>[\s\S]*?<\/update_wallet>/g, '')
+          .replace(/<delete_wallet>[\s\S]*?<\/delete_wallet>/g, '')
+          .replace(/<record_entry>[\s\S]*?<\/record_entry>/g, '')
+          .replace(/<delete_entry>[\s\S]*?<\/delete_entry>/g, '')
           .trim();
 
         addMemexChat({ role: 'assistant', content: cleanReply });
