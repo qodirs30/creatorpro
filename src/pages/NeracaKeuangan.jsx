@@ -430,6 +430,7 @@ export default function NeracaKeuangan() {
     // Inisialisasi 6 bulan terakhir secara presisi
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
+      d.setDate(1); // Hindari bug overflow tanggal 31
       d.setMonth(d.getMonth() - i);
       const mName = monthNames[d.getMonth()];
       const yStr = String(d.getFullYear()).slice(-2);
@@ -438,10 +439,15 @@ export default function NeracaKeuangan() {
     }
 
     financialEntries.forEach(entry => {
-      const d = new Date(entry.date);
-      if (isNaN(d.getTime())) return;
-      const mName = monthNames[d.getMonth()];
-      const yStr = String(d.getFullYear()).slice(-2);
+      if (!entry.date) return;
+      const parts = entry.date.split('-');
+      if (parts.length < 2) return;
+      const year = parseInt(parts[0], 10);
+      const monthIdx = parseInt(parts[1], 10) - 1;
+      if (isNaN(year) || isNaN(monthIdx)) return;
+
+      const mName = monthNames[monthIdx];
+      const yStr = String(year).slice(-2);
       const key = `${mName} ${yStr}`;
       if (months[key]) {
         if (entry.type === 'income') {
@@ -454,6 +460,68 @@ export default function NeracaKeuangan() {
 
     return Object.values(months);
   }, [financialEntries]);
+
+  // 100% Browser-Proof Daily Expense Trend (15 Hari Terakhir)
+  const dailyExpenseTrend = useMemo(() => {
+    const dateMap = {};
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    
+    // Inisialisasi 15 hari terakhir
+    for (let i = 14; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${yyyy}-${mm}-${dd}`;
+      const label = `${d.getDate()} ${monthNames[d.getMonth()]}`;
+      dateMap[dateStr] = { label, amount: 0 };
+    }
+
+    financialEntries.forEach(entry => {
+      if (entry.type === 'expense' && dateMap[entry.date]) {
+        dateMap[entry.date].amount += entry.amount;
+      }
+    });
+
+    return Object.keys(dateMap).sort().map(key => ({
+      date: key,
+      label: dateMap[key].label,
+      amount: dateMap[key].amount
+    }));
+  }, [financialEntries]);
+
+  const maxDailyExpense = useMemo(() => {
+    return Math.max(...dailyExpenseTrend.map(d => d.amount), 1);
+  }, [dailyExpenseTrend]);
+
+  const svgPathData = useMemo(() => {
+    if (dailyExpenseTrend.length === 0) return { linePath: '', areaPath: '', points: [] };
+    const width = 500;
+    const height = 120;
+    const points = dailyExpenseTrend.map((item, idx) => {
+      const x = (idx / (dailyExpenseTrend.length - 1)) * width;
+      const y = height - 10 - (item.amount / maxDailyExpense) * (height - 25);
+      return { x, y };
+    });
+
+    // Generate smooth path line
+    let linePath = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i];
+      const p1 = points[i + 1];
+      const cpX1 = p0.x + (p1.x - p0.x) / 2;
+      const cpY1 = p0.y;
+      const cpX2 = p0.x + (p1.x - p0.x) / 2;
+      const cpY2 = p1.y;
+      linePath += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${p1.x} ${p1.y}`;
+    }
+
+    // Generate closed area path
+    const areaPath = `${linePath} L ${points[points.length - 1].x} ${height} L ${points[0].x} ${height} Z`;
+
+    return { linePath, areaPath, points };
+  }, [dailyExpenseTrend, maxDailyExpense]);
 
   // Filter Transaksi Berdasarkan search / dropdowns
   const filteredEntries = useMemo(() => {
@@ -882,52 +950,106 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
             </div>
           </div>
 
-          {/* QUICK INSIGHTS CARD */}
+          {/* QUICK INSIGHTS CARD - HIGHLY VISUAL */}
           <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem', transform: 'none' }}>
             <h3 className="section-title mb-3" style={{ fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Sparkles size={16} className="text-accent" /> Ringkasan Kesehatan Finansial
+              <Sparkles size={16} className="text-accent" /> Ringkasan Kesehatan Finansial (Visual Indicators)
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginTop: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem', marginTop: '1rem' }}>
               
-              <div className="flex-column gap-1">
-                <span className="text-xs text-muted font-bold text-uppercase">Rasio Dana Darurat</span>
-                <span className="font-bold text-md" style={{ color: Number(emergencyFundMonths) >= 3 ? 'var(--success)' : 'var(--warning)' }}>
+              {/* Gauge 1: Emergency Fund */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '16px', padding: '1rem' }}>
+                <span className="text-xs text-muted font-bold text-uppercase" style={{ letterSpacing: '0.05em' }}>🛡️ Dana Darurat (Target 6 Bln)</span>
+                <span className="font-bold text-lg" style={{ color: Number(emergencyFundMonths) >= 6 ? 'var(--success)' : Number(emergencyFundMonths) >= 3 ? 'var(--warning)' : 'var(--danger)', marginTop: '2px' }}>
                   {emergencyFundMonths} Bulan Biaya Hidup
                 </span>
-                <p className="text-xs text-muted" style={{ margin: 0 }}>Target ideal: minimal 3-6 bulan pengeluaran bulanan.</p>
+                <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', marginTop: '4px', position: 'relative' }}>
+                  {/* Minimum 3 Months line marker */}
+                  <div style={{ position: 'absolute', left: '50%', top: 0, bottom: 0, width: '1.5px', backgroundColor: 'rgba(255,255,255,0.2)', zIndex: 1 }} />
+                  <div style={{ 
+                    width: `${Math.min(100, Math.round((Number(emergencyFundMonths) || 0) / 6 * 100))}%`, 
+                    height: '100%', 
+                    backgroundColor: Number(emergencyFundMonths) >= 6 ? 'var(--success)' : Number(emergencyFundMonths) >= 3 ? 'var(--warning)' : 'var(--danger)',
+                    borderRadius: '4px',
+                    transition: 'width 0.4s ease'
+                  }} />
+                </div>
+                <div className="flex-between text-xs text-muted" style={{ marginTop: '2px' }}>
+                  <span>Min: 3 Bln</span>
+                  <span>Ideal: 6 Bln</span>
+                </div>
               </div>
 
-              <div className="flex-column gap-1">
-                <span className="text-xs text-muted font-bold text-uppercase">Kebutuhan vs Keinginan</span>
-                <div className="flex-between text-xs font-semibold text-secondary">
-                  <span>Needs: {needsVsWants.needsPct}%</span>
-                  <span>Wants: {needsVsWants.wantsPct}%</span>
+              {/* Gauge 2: Needs vs Wants */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '16px', padding: '1rem' }}>
+                <span className="text-xs text-muted font-bold text-uppercase" style={{ letterSpacing: '0.05em' }}>⚖️ Kebutuhan vs Keinginan</span>
+                <div className="flex-between text-xs font-semibold text-secondary" style={{ marginTop: '4px' }}>
+                  <span style={{ color: 'var(--primary)' }}>Needs: {needsVsWants.needsPct}%</span>
+                  <span style={{ color: 'var(--accent)' }}>Wants: {needsVsWants.wantsPct}%</span>
                 </div>
-                <div style={{ width: '100%', height: '8px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.05)', overflow: 'hidden', display: 'flex', marginTop: '3px' }}>
-                  <div style={{ width: `${needsVsWants.needsPct}%`, height: '100%', backgroundColor: 'var(--primary)' }} />
-                  <div style={{ width: `${needsVsWants.wantsPct}%`, height: '100%', backgroundColor: 'var(--accent)' }} />
+                <div style={{ width: '100%', height: '8px', borderRadius: '4px', backgroundColor: 'rgba(255,255,255,0.05)', overflow: 'hidden', display: 'flex', marginTop: '4px' }}>
+                  <div style={{ width: `${needsVsWants.needsPct}%`, height: '100%', backgroundColor: 'var(--primary)', transition: 'width 0.4s ease' }} />
+                  <div style={{ width: `${needsVsWants.wantsPct}%`, height: '100%', backgroundColor: 'var(--accent)', transition: 'width 0.4s ease' }} />
                 </div>
-                <p className="text-xs text-muted" style={{ margin: '4px 0 0 0' }}>Rasio ideal: 50% Kebutuhan, 30% Keinginan, 20% Tabungan.</p>
+                <div className="flex-between text-xs text-muted" style={{ marginTop: '2px' }}>
+                  <span>Ideal: 50% / 30% / 20%</span>
+                  <span>Selisih: {Math.abs(needsVsWants.needsPct - needsVsWants.wantsPct)}%</span>
+                </div>
               </div>
 
-              <div className="flex-column gap-1">
-                <span className="text-xs text-muted font-bold text-uppercase">Banding Bulan Lalu (MoM)</span>
+              {/* Gauge 3: Month-over-Month Trend */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '16px', padding: '1rem' }}>
+                <span className="text-xs text-muted font-bold text-uppercase" style={{ letterSpacing: '0.05em' }}>📈 Trend Belanja Bulanan</span>
                 {momComparison.direction === 'none' ? (
-                  <span className="font-bold text-md text-muted">Belum ada data pembanding</span>
+                  <span className="font-bold text-md text-muted" style={{ marginTop: '2px' }}>Belum ada pembanding</span>
                 ) : (
-                  <span className="font-bold text-md" style={{ color: momComparison.direction === 'naik' ? 'var(--danger)' : 'var(--success)' }}>
-                    {momComparison.direction === 'naik' ? '📈 Naik' : '📉 Turun'} {momComparison.changePct}% dibanding Juli
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '2px' }}>
+                    <div style={{ 
+                      width: '28px', 
+                      height: '28px', 
+                      borderRadius: '50%', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      backgroundColor: momComparison.direction === 'naik' ? 'rgba(244,63,94,0.1)' : 'rgba(16,185,129,0.1)', 
+                      color: momComparison.direction === 'naik' ? 'var(--danger)' : 'var(--success)'
+                    }}>
+                      {momComparison.direction === 'naik' ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
+                    </div>
+                    <span className="font-bold text-lg" style={{ color: momComparison.direction === 'naik' ? 'var(--danger)' : 'var(--success)' }}>
+                      {momComparison.direction === 'naik' ? 'Naik' : 'Turun'} {momComparison.changePct}%
+                    </span>
+                  </div>
                 )}
-                <p className="text-xs text-muted" style={{ margin: 0 }}>Rincian keluar bulan ini vs bulan sebelumnya.</p>
+                <p className="text-xs text-muted" style={{ margin: '2px 0 0 0' }}>Dibanding pengeluaran bulan lalu.</p>
               </div>
 
-              <div className="flex-column gap-1">
-                <span className="text-xs text-muted font-bold text-uppercase">Prediksi Pengeluaran Akhir Bulan</span>
-                <span className="font-bold text-md text-gradient">
+              {/* Gauge 4: Projected Run Rate vs Income */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '16px', padding: '1rem' }}>
+                <span className="text-xs text-muted font-bold text-uppercase" style={{ letterSpacing: '0.05em' }}>🔮 Prediksi Akhir Bulan</span>
+                <span className="font-bold text-lg text-gradient" style={{ marginTop: '2px' }}>
                   Rp {runRateEstimate.toLocaleString()}
                 </span>
-                <p className="text-xs text-muted" style={{ margin: 0 }}>Estimasi total keluar berdasarkan rata-rata harian saat ini.</p>
+                {(() => {
+                  const consumePct = summary.income > 0 ? Math.round((runRateEstimate / summary.income) * 100) : 0;
+                  return (
+                    <>
+                      <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' }}>
+                        <div style={{ 
+                          width: `${Math.min(100, consumePct)}%`, 
+                          height: '100%', 
+                          backgroundColor: consumePct > 100 ? 'var(--danger)' : consumePct > 80 ? 'var(--warning)' : 'var(--primary)',
+                          borderRadius: '4px',
+                          transition: 'width 0.4s ease'
+                        }} />
+                      </div>
+                      <div className="flex-between text-xs text-muted" style={{ marginTop: '2px' }}>
+                        <span>Laju Penggunaan Gaji</span>
+                        <span>{consumePct}% Gaji</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
             </div>
@@ -1090,7 +1212,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                 )}
               </div>
 
-              {/* Monthly Cashflow Bar Chart */}
+              {/* Monthly Cashflow Bar Chart - Collapsing Fixed */}
               <div className="card" style={{ transform: 'none' }}>
                 <h3 className="section-title mb-3" style={{ fontSize: '1.1rem' }}>Arus Kas Bulanan (6 Bulan Terakhir)</h3>
                 <div className="chart-bar-container mt-3" style={{ height: '140px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px' }}>
@@ -1100,8 +1222,8 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                     const expenseHeightPct = Math.max(5, Math.round((month.expense / maxVal) * 100));
 
                     return (
-                      <div key={month.name} className="flex-column items-center gap-1" style={{ flex: 1, height: '100%' }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3px', flex: 1, width: '100%', paddingBottom: '4px' }}>
+                      <div key={month.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', flex: 1, height: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '3.5px', flex: 1, width: '100%', paddingBottom: '4px' }}>
                           <div 
                             className="bar-income" 
                             title={`Pemasukan: Rp ${month.income.toLocaleString()}`}
@@ -1109,7 +1231,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                               flex: 1, 
                               height: `${incomeHeightPct}%`, 
                               background: 'linear-gradient(180deg, #10b981 0%, #059669 100%)',
-                              borderRadius: '3px 3px 0 0',
+                              borderRadius: '4px 4px 0 0',
                               transition: 'height 0.3s ease'
                             }} 
                           />
@@ -1120,23 +1242,81 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                               flex: 1, 
                               height: `${expenseHeightPct}%`, 
                               background: 'linear-gradient(180deg, #ef4444 0%, #dc2626 100%)',
-                              borderRadius: '3px 3px 0 0',
+                              borderRadius: '4px 4px 0 0',
                               transition: 'height 0.3s ease'
                             }} 
                           />
                         </div>
-                        <span className="text-muted" style={{ fontSize: '0.75rem', fontWeight: 600 }}>{month.name}</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{month.name}</span>
                       </div>
                     );
                   })}
                 </div>
-                <div className="flex-align gap-3 justify-center mt-3 text-xs text-secondary">
-                  <div className="flex-align gap-1">
-                    <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#10b981' }} /> Pemasukan
+                <div className="flex-align gap-3 justify-center mt-3 text-xs text-secondary" style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#10b981', display: 'inline-block' }} /> Pemasukan
                   </div>
-                  <div className="flex-align gap-1">
-                    <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#ef4444' }} /> Pengeluaran
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '2px', backgroundColor: '#ef4444', display: 'inline-block' }} /> Pengeluaran
                   </div>
+                </div>
+              </div>
+
+              {/* Trend Pengeluaran Harian (15 Hari Terakhir) - NEW */}
+              <div className="card" style={{ transform: 'none' }}>
+                <h3 className="section-title mb-3" style={{ fontSize: '1.1rem' }}>Trend Pengeluaran Harian (15 Hari Terakhir)</h3>
+                <div style={{ position: 'relative', width: '100%', height: '140px', marginTop: '1rem', backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.03)', padding: '10px 0' }}>
+                  {maxDailyExpense === 1 ? (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                      Belum ada data pengeluaran dalam 15 hari terakhir.
+                    </div>
+                  ) : (
+                    <svg viewBox="0 0 500 120" width="100%" height="100%" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
+                      <defs>
+                        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.3" />
+                          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.0" />
+                        </linearGradient>
+                        <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="var(--primary)" />
+                          <stop offset="100%" stopColor="var(--accent)" />
+                        </linearGradient>
+                      </defs>
+                      
+                      {/* Grid Lines */}
+                      <line x1="0" y1="30" x2="500" y2="30" stroke="rgba(255,255,255,0.02)" strokeWidth="1" />
+                      <line x1="0" y1="60" x2="500" y2="60" stroke="rgba(255,255,255,0.02)" strokeWidth="1" />
+                      <line x1="0" y1="90" x2="500" y2="90" stroke="rgba(255,255,255,0.02)" strokeWidth="1" />
+
+                      {/* Area Path */}
+                      <path d={svgPathData.areaPath} fill="url(#areaGrad)" />
+                      
+                      {/* Line Path */}
+                      <path d={svgPathData.linePath} fill="none" stroke="url(#lineGrad)" strokeWidth="2.5" strokeLinecap="round" />
+                      
+                      {/* Glow Line */}
+                      <path d={svgPathData.linePath} fill="none" stroke="var(--primary)" strokeWidth="6" strokeLinecap="round" opacity="0.15" style={{ filter: 'blur(3px)' }} />
+
+                      {/* Highlight Dots */}
+                      {svgPathData.points.map((pt, idx) => {
+                        const item = dailyExpenseTrend[idx];
+                        if (item.amount === 0) return null;
+                        return (
+                          <g key={idx}>
+                            <circle cx={pt.x} cy={pt.y} r="4.5" fill="var(--bg-main)" stroke="var(--accent)" strokeWidth="2" />
+                            <circle cx={pt.x} cy={pt.y} r="8" fill="var(--accent)" opacity="0.15" />
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  )}
+                </div>
+                
+                {/* X-Axis labels */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', padding: '0 0.5rem' }}>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{dailyExpenseTrend[0]?.label}</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{dailyExpenseTrend[Math.floor(dailyExpenseTrend.length / 2)]?.label}</span>
+                  <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 500 }}>{dailyExpenseTrend[dailyExpenseTrend.length - 1]?.label}</span>
                 </div>
               </div>
             </div>
@@ -1184,65 +1364,126 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                 </div>
               </div>
 
-              {/* Side-by-Side Top Expenses & Incomes Leaderboard */}
+              {/* Side-by-Side Top Expenses & Incomes Leaderboard - HIGHLY VISUAL */}
               <div className="card" style={{ transform: 'none' }}>
                 <h3 className="section-title mb-3 flex-align gap-2" style={{ fontSize: '1.1rem' }}>
-                  <SlidersHorizontal size={18} className="icon-accent" /> Top Transaksi Terbesar
+                  <SlidersHorizontal size={18} className="icon-accent" /> Top Transaksi Terbesar (Relative Scale)
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem', marginTop: '1rem' }}>
+                <p className="text-xs text-muted mb-4">Daftar transaksi nominal terbesar pada periode terpilih dengan intensitas warna berdasarkan perbandingan skala.</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginTop: '1rem' }}>
                   
                   {/* Top Expenses */}
-                  <div className="flex-column gap-2">
-                    <span className="text-xs font-bold text-danger text-uppercase tracking-wider mb-1">🔴 Top 5 Pengeluaran</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <span className="text-xs font-bold text-danger text-uppercase tracking-wider mb-2" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--danger)' }} /> Top 5 Pengeluaran
+                    </span>
                     {topSingleExpenses.length === 0 ? (
                       <p className="text-muted text-xs text-center py-4">Belum ada pengeluaran.</p>
                     ) : (
-                      topSingleExpenses.map((entry, idx) => {
-                        const styleMeta = getExpenseIcon(entry);
-                        return (
-                          <div key={entry.id} className="flex-between p-2" style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px' }}>
-                            <div className="flex-align gap-2">
-                              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', width: '12px' }}>{idx + 1}</span>
-                              <div style={{ width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: styleMeta.bg, color: styleMeta.color }}>
-                                {styleMeta.icon}
-                              </div>
-                              <div className="flex-column">
-                                <span className="font-semibold text-xs text-primary-light" style={{ color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100px' }}>{entry.description}</span>
-                                <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{entry.date}</span>
+                      (() => {
+                        const maxExpense = Math.max(...topSingleExpenses.map(e => e.amount), 1);
+                        return topSingleExpenses.map((entry, idx) => {
+                          const relativePct = Math.round((entry.amount / maxExpense) * 100);
+                          const styleMeta = getExpenseIcon(entry);
+                          return (
+                            <div 
+                              key={entry.id} 
+                              style={{ 
+                                position: 'relative', 
+                                overflow: 'hidden', 
+                                borderRadius: '12px', 
+                                border: '1px solid rgba(255,255,255,0.03)', 
+                                backgroundColor: 'rgba(255,255,255,0.01)',
+                                padding: '0.65rem 0.85rem'
+                              }}
+                            >
+                              {/* Relative background visual scale */}
+                              <div style={{ 
+                                position: 'absolute', 
+                                left: 0, 
+                                top: 0, 
+                                bottom: 0, 
+                                width: `${relativePct}%`, 
+                                backgroundColor: 'rgba(244,63,94,0.05)', 
+                                zIndex: 0,
+                                transition: 'width 0.4s ease'
+                              }} />
+                              <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', width: '12px' }}>{idx + 1}</span>
+                                  <div style={{ width: '26px', height: '26px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: styleMeta.bg, color: styleMeta.color }}>
+                                    {styleMeta.icon}
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>{entry.description}</span>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{entry.date}</span>
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--danger)' }}>
+                                  -Rp {entry.amount.toLocaleString()}
+                                </span>
                               </div>
                             </div>
-                            <span className="font-bold text-xs" style={{ color: 'var(--danger)' }}>
-                              -Rp {entry.amount.toLocaleString()}
-                            </span>
-                          </div>
-                        );
-                      })
+                          );
+                        });
+                      })()
                     )}
                   </div>
 
                   {/* Top Incomes */}
-                  <div className="flex-column gap-2">
-                    <span className="text-xs font-bold text-success text-uppercase tracking-wider mb-1">🟢 Top 5 Pemasukan</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <span className="text-xs font-bold text-success text-uppercase tracking-wider mb-2" style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--success)' }} /> Top 5 Pemasukan
+                    </span>
                     {topSingleIncomes.length === 0 ? (
                       <p className="text-muted text-xs text-center py-4">Belum ada pemasukan.</p>
                     ) : (
-                      topSingleIncomes.map((entry, idx) => (
-                        <div key={entry.id} className="flex-between p-2" style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '12px' }}>
-                          <div className="flex-align gap-2">
-                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', width: '12px' }}>{idx + 1}</span>
-                            <div style={{ width: '24px', height: '24px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
-                              <ArrowUpRight size={14} />
+                      (() => {
+                        const maxIncome = Math.max(...topSingleIncomes.map(e => e.amount), 1);
+                        return topSingleIncomes.map((entry, idx) => {
+                          const relativePct = Math.round((entry.amount / maxIncome) * 100);
+                          return (
+                            <div 
+                              key={entry.id} 
+                              style={{ 
+                                position: 'relative', 
+                                overflow: 'hidden', 
+                                borderRadius: '12px', 
+                                border: '1px solid rgba(255,255,255,0.03)', 
+                                backgroundColor: 'rgba(255,255,255,0.01)',
+                                padding: '0.65rem 0.85rem'
+                              }}
+                            >
+                              {/* Relative background visual scale */}
+                              <div style={{ 
+                                position: 'absolute', 
+                                left: 0, 
+                                top: 0, 
+                                bottom: 0, 
+                                width: `${relativePct}%`, 
+                                backgroundColor: 'rgba(16,185,129,0.05)', 
+                                zIndex: 0,
+                                transition: 'width 0.4s ease'
+                              }} />
+                              <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', width: '12px' }}>{idx + 1}</span>
+                                  <div style={{ width: '26px', height: '26px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
+                                    <ArrowUpRight size={14} />
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '110px' }}>{entry.description}</span>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{entry.date}</span>
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--success)' }}>
+                                  +Rp {entry.amount.toLocaleString()}
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex-column">
-                              <span className="font-semibold text-xs text-primary-light" style={{ color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100px' }}>{entry.description}</span>
-                              <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{entry.date}</span>
-                            </div>
-                          </div>
-                          <span className="font-bold text-xs" style={{ color: 'var(--success)' }}>
-                            +Rp {entry.amount.toLocaleString()}
-                          </span>
-                        </div>
-                      ))
+                          );
+                        });
+                      })()
                     )}
                   </div>
 
@@ -1291,54 +1532,103 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                   </div>
                 </div>
 
-                <div className="transaction-history-list mt-2 flex-column gap-2" style={{ maxHeight: '420px', overflowY: 'auto' }}>
+                <div className="transaction-history-list mt-2" style={{ maxHeight: '420px', overflowY: 'auto' }}>
                   {filteredEntries.length === 0 ? (
                     <div className="empty-box p-4 text-center">
                       <p className="text-muted text-sm">Tidak ada transaksi ditemukan.</p>
                     </div>
                   ) : (
-                    filteredEntries.map(entry => (
-                      <div 
-                        key={entry.id} 
-                        className="transaction-list-item flex-between p-3"
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.01)',
-                          border: '1px solid rgba(255, 255, 255, 0.03)',
-                          borderRadius: '16px',
-                          padding: '0.85rem 1.25rem',
-                          transition: 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1), border-color 0.2s ease',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}
-                      >
-                        <div className="flex-align gap-2" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <div className={`transaction-icon-indicator ${entry.type === 'income' ? 'icon-emerald' : 'icon-destructive'}`} style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: entry.type === 'income' ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)', color: entry.type === 'income' ? 'var(--success)' : 'var(--danger)' }}>
-                            {entry.type === 'income' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                          </div>
-                          <div className="flex-column">
-                            <span className="transaction-item-title font-semibold text-sm" style={{ color: 'var(--text-primary)', display: 'block' }}>{entry.description}</span>
-                            <span className="transaction-item-meta text-xs text-muted" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                              <span>{entry.category}</span> • <Calendar size={10} /> <span>{entry.date}</span>
-                            </span>
-                          </div>
-                        </div>
+                    <div style={{ overflowX: 'auto', width: '100%' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: 'var(--text-secondary)' }}>
+                            <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Tanggal & Jam</th>
+                            <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Keterangan</th>
+                            <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Kategori</th>
+                            <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Tipe</th>
+                            <th style={{ textAlign: 'right', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Nominal</th>
+                            <th style={{ textAlign: 'center', padding: '0.6rem 0.5rem', width: '40px' }}>Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredEntries.map(entry => {
+                            const dateObj = new Date(entry.createdAt || entry.date);
+                            const formattedDate = dateObj.toLocaleDateString('id-ID', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: '2-digit'
+                            });
+                            const formattedTime = dateObj.toLocaleTimeString('id-ID', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            });
+                            const isIncome = entry.type === 'income';
 
-                        <div className="flex-align gap-3" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <span className="transaction-item-val font-bold text-sm" style={{ color: entry.type === 'income' ? 'var(--success)' : 'var(--danger)' }}>
-                            {entry.type === 'income' ? '+' : '-'} Rp {entry.amount.toLocaleString()}
-                          </span>
-                          <button
-                            className="btn-icon delete-card-btn"
-                            onClick={() => deleteFinancialEntry(entry.id)}
-                            style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
-                            title="Hapus Transaksi"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                    ))
+                            return (
+                              <tr 
+                                key={entry.id} 
+                                className="table-row-hover"
+                                style={{ 
+                                  borderBottom: '1px solid rgba(255, 255, 255, 0.03)',
+                                  transition: 'background-color 0.2s'
+                                }}
+                              >
+                                <td style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                  {formattedDate} {formattedTime !== '00.00' && formattedTime !== '00:00' && formattedTime !== '00.00.00' ? formattedTime : ''}
+                                </td>
+                                <td style={{ padding: '0.75rem 0.5rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+                                  {entry.description}
+                                </td>
+                                <td style={{ padding: '0.75rem 0.5rem' }}>
+                                  <span style={{ 
+                                    padding: '2px 8px', 
+                                    borderRadius: '6px', 
+                                    backgroundColor: 'rgba(255,255,255,0.03)', 
+                                    color: 'var(--text-secondary)',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 500
+                                  }}>
+                                    {entry.category}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '0.75rem 0.5rem' }}>
+                                  <span style={{ 
+                                    padding: '2px 8px', 
+                                    borderRadius: '6px', 
+                                    backgroundColor: isIncome ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)', 
+                                    color: isIncome ? 'var(--success)' : 'var(--danger)',
+                                    fontSize: '0.72rem',
+                                    fontWeight: 600
+                                  }}>
+                                    {isIncome ? 'Pemasukan' : 'Pengeluaran'}
+                                  </span>
+                                </td>
+                                <td style={{ 
+                                  padding: '0.75rem 0.5rem', 
+                                  textAlign: 'right', 
+                                  fontWeight: 700,
+                                  color: isIncome ? 'var(--success)' : 'var(--danger)'
+                                }}>
+                                  {isIncome ? '+' : '-'} Rp {entry.amount.toLocaleString()}
+                                </td>
+                                <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                                  <button
+                                    className="btn-icon"
+                                    onClick={() => deleteFinancialEntry(entry.id)}
+                                    style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', opacity: 0.7 }}
+                                    title="Hapus Transaksi"
+                                    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                                  >
+                                    <Trash2 size={13} className="text-danger" />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1917,6 +2207,16 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
         @keyframes refreshSpin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
+        }
+        .table-row-hover:hover {
+          background-color: rgba(255, 255, 255, 0.02) !important;
+        }
+        .leaderboard-item {
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+        }
+        .leaderboard-item:hover {
+          transform: translateY(-2px);
+          border-color: rgba(99, 102, 241, 0.2) !important;
         }
         .transaction-list-item:hover {
           transform: translateX(4px) !important;
