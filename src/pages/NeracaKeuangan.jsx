@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { 
   TrendingUp, TrendingDown, DollarSign, Plus, Trash2, 
   Search, Filter, Sparkles, AlertTriangle, Calendar, 
-  HelpCircle, RefreshCw, Wallet, PiggyBank, ArrowDownRight, ArrowUpRight
+  HelpCircle, RefreshCw, Wallet, PiggyBank, ArrowDownRight, ArrowUpRight,
+  Coffee, Utensils, ShoppingBag, CreditCard, ChevronRight, CalendarDays, SlidersHorizontal
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
 import { generateContent } from '../utils/ai';
@@ -35,43 +36,15 @@ export default function NeracaKeuangan() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState('');
 
-  // Jalankan migrasi satu kali ketika halaman dimuat
-  useEffect(() => {
-    const transactionsFromMemex = memexCards.filter(c => c.type === 'transaction');
-    if (transactionsFromMemex.length === 0) return;
-
-    const toMigrate = [];
-    transactionsFromMemex.forEach(c => {
-      // Periksa apakah transaksi ini sudah dimigrasi ke financialEntries
-      const isAlreadyMigrated = financialEntries.some(e => 
-        e.id === c.id || 
-        (e.description === c.title && 
-         e.amount === Number(c.data?.amount || 0) && 
-         e.date === (c.data?.date || new Date(c.createdAt).toISOString().split('T')[0]))
-      );
-
-      if (!isAlreadyMigrated) {
-        toMigrate.push({
-          id: c.id, // Pertahankan ID asli
-          type: c.data?.type || 'expense',
-          category: c.data?.category || 'Lainnya',
-          amount: Number(c.data?.amount || 0),
-          date: c.data?.date || new Date(c.createdAt).toISOString().split('T')[0],
-          description: c.title || c.data?.summary || 'Transaksi Migrasi',
-          createdAt: c.createdAt || new Date().toISOString()
-        });
-      }
-    });
-
-    if (toMigrate.length > 0) {
-      addMultipleFinancialEntries(toMigrate);
-    }
-  }, [memexCards, financialEntries, addMultipleFinancialEntries]);
-
   // Filtering / Search States
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterType, setFilterType] = useState('all');
+
+  // Date/Period Filter States
+  const [filterPeriod, setFilterPeriod] = useState('this-month'); // 'this-month' | 'last-month' | 'this-year' | 'all' | 'custom'
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
 
   // AI Advisor States
   const [aiAnalysis, setAiAnalysis] = useState('');
@@ -106,12 +79,74 @@ export default function NeracaKeuangan() {
     setDescription('');
   };
 
-  // Perhitungan Keuangan Dinamis
+  // Jalankan migrasi satu kali ketika halaman dimuat
+  useEffect(() => {
+    const transactionsFromMemex = memexCards.filter(c => c.type === 'transaction');
+    if (transactionsFromMemex.length === 0) return;
+
+    const toMigrate = [];
+    transactionsFromMemex.forEach(c => {
+      // Periksa apakah transaksi ini sudah dimigrasi ke financialEntries
+      const isAlreadyMigrated = financialEntries.some(e => 
+        e.id === c.id || 
+        (e.description === c.title && 
+         e.amount === Number(c.data?.amount || 0) && 
+         e.date === (c.data?.date || new Date(c.createdAt).toISOString().split('T')[0]))
+      );
+
+      if (!isAlreadyMigrated) {
+        toMigrate.push({
+          id: c.id, // Pertahankan ID asli
+          type: c.data?.type || 'expense',
+          category: c.data?.category || 'Lainnya',
+          amount: Number(c.data?.amount || 0),
+          date: c.data?.date || new Date(c.createdAt).toISOString().split('T')[0],
+          description: c.title || c.data?.summary || 'Transaksi Migrasi',
+          createdAt: c.createdAt || new Date().toISOString()
+        });
+      }
+    });
+
+    if (toMigrate.length > 0) {
+      addMultipleFinancialEntries(toMigrate);
+    }
+  }, [memexCards, financialEntries, addMultipleFinancialEntries]);
+
+  // Saring transaksi berdasarkan periode waktu yang dipilih
+  const selectedEntries = useMemo(() => {
+    const now = new Date();
+    return financialEntries.filter(entry => {
+      const entryDate = new Date(entry.date);
+      if (isNaN(entryDate.getTime())) return true;
+
+      if (filterPeriod === 'this-month') {
+        return entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear();
+      }
+      if (filterPeriod === 'last-month') {
+        const prevMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+        const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        return entryDate.getMonth() === prevMonth && entryDate.getFullYear() === prevYear;
+      }
+      if (filterPeriod === 'this-year') {
+        return entryDate.getFullYear() === now.getFullYear();
+      }
+      if (filterPeriod === 'custom') {
+        if (!customStartDate || !customEndDate) return true;
+        const start = new Date(customStartDate);
+        const end = new Date(customEndDate);
+        end.setHours(23, 59, 59, 999);
+        return entryDate >= start && entryDate <= end;
+      }
+      return true; // 'all'
+    });
+  }, [financialEntries, filterPeriod, customStartDate, customEndDate]);
+
+  // Perhitungan Keuangan Dinamis Berdasarkan selectedEntries
   const summary = useMemo(() => {
     let income = 0;
     let expense = 0;
 
-    financialEntries.forEach(entry => {
+    selectedEntries.forEach(entry => {
       if (entry.type === 'income') {
         income += entry.amount;
       } else {
@@ -123,14 +158,14 @@ export default function NeracaKeuangan() {
     const savingsRate = income > 0 ? Math.round((balance / income) * 100) : 0;
 
     return { income, expense, balance, savingsRate };
-  }, [financialEntries]);
+  }, [selectedEntries]);
 
-  // Breakdown Kategori Pengeluaran untuk Donut Chart
+  // Breakdown Kategori Pengeluaran untuk Donut Chart & Progress Bars
   const expenseByCategory = useMemo(() => {
     const breakdown = {};
     let totalExpense = 0;
 
-    financialEntries.forEach(entry => {
+    selectedEntries.forEach(entry => {
       if (entry.type === 'expense') {
         breakdown[entry.category] = (breakdown[entry.category] || 0) + entry.amount;
         totalExpense += entry.amount;
@@ -142,7 +177,35 @@ export default function NeracaKeuangan() {
       amount: breakdown[cat],
       percentage: totalExpense > 0 ? Math.round((breakdown[cat] / totalExpense) * 100) : 0
     })).sort((a, b) => b.amount - a.amount);
-  }, [financialEntries]);
+  }, [selectedEntries]);
+
+  // Analisis Top 5 Pengeluaran Tunggal Terbesar
+  const topSingleExpenses = useMemo(() => {
+    return selectedEntries
+      .filter(e => e.type === 'expense')
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 5);
+  }, [selectedEntries]);
+
+  // Helper Ikon Deskriptif Pengeluaran
+  const getExpenseIcon = (entry) => {
+    const desc = entry.description.toLowerCase();
+    const cat = entry.category.toLowerCase();
+    
+    if (desc.includes('kopi') || desc.includes('coffee') || desc.includes('starbucks') || desc.includes('cafe')) {
+      return { icon: <Coffee size={15} />, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' };
+    }
+    if (desc.includes('makan') || desc.includes('food') || cat.includes('makanan') || desc.includes('warteg') || desc.includes('go-food')) {
+      return { icon: <Utensils size={15} />, color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' };
+    }
+    if (desc.includes('belanja') || desc.includes('shopping') || cat.includes('belanja') || desc.includes('beli') || desc.includes('baju')) {
+      return { icon: <ShoppingBag size={15} />, color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' };
+    }
+    if (desc.includes('tagihan') || desc.includes('listrik') || cat.includes('tagihan') || desc.includes('pulsa') || desc.includes('wifi')) {
+      return { icon: <CreditCard size={15} />, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' };
+    }
+    return { icon: <DollarSign size={15} />, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' };
+  };
 
   // Data Kas Arus Bulanan untuk Chart Batang
   const monthlyCashflow = useMemo(() => {
@@ -171,9 +234,9 @@ export default function NeracaKeuangan() {
     return Object.values(months);
   }, [financialEntries]);
 
-  // Filter Transaksi
+  // Filter Transaksi Berdasarkan selectedEntries
   const filteredEntries = useMemo(() => {
-    return financialEntries.filter(entry => {
+    return selectedEntries.filter(entry => {
       const matchesSearch = entry.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             entry.category.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterType === 'all' || entry.type === filterType;
@@ -181,14 +244,14 @@ export default function NeracaKeuangan() {
 
       return matchesSearch && matchesType && matchesCategory;
     });
-  }, [financialEntries, searchTerm, filterType, filterCategory]);
+  }, [selectedEntries, searchTerm, filterType, filterCategory]);
 
   // Panggil Suki AI Advisor
   const handleRequestAiAdvice = async () => {
     setLoadingAi(true);
     setAiAnalysis('');
     try {
-      const recentList = financialEntries.slice(0, 5).map(e => 
+      const recentList = selectedEntries.slice(0, 5).map(e => 
         `- [${e.date}] ${e.type === 'income' ? 'Pemasukan' : 'Pengeluaran'} ${e.category} senilai Rp ${e.amount.toLocaleString()} (${e.description})`
       ).join('\n');
 
@@ -235,12 +298,57 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
   return (
     <div className="page-container">
       {/* Header */}
-      <div className="page-header flex-between">
+      <div className="page-header flex-between flex-wrap gap-2">
         <div>
           <h1 className="page-title flex-align gap-2">
             <Wallet className="icon-accent" size={26} /> Neraca Keuangan Studio
           </h1>
           <p className="page-subtitle">Kelola kas bulanan, lacak pengeluaran, dan dapatkan analisis anggaran dari AI Suki.</p>
+        </div>
+      </div>
+
+      {/* Sleek Period Filter Bar */}
+      <div className="period-filter-bar glass-panel p-3 mb-4">
+        <div className="flex-between flex-wrap gap-3">
+          <div className="flex-align gap-2 flex-wrap">
+            <CalendarDays size={16} className="text-secondary" />
+            <span className="text-sm font-semibold text-secondary mr-2">Filter Periode:</span>
+            {[
+              { id: 'all', label: 'Semua Waktu' },
+              { id: 'this-month', label: 'Bulan Ini' },
+              { id: 'last-month', label: 'Bulan Lalu' },
+              { id: 'this-year', label: 'Tahun Ini' },
+              { id: 'custom', label: 'Kustom Tanggal' },
+            ].map(p => (
+              <button
+                key={p.id}
+                onClick={() => setFilterPeriod(p.id)}
+                className={`period-filter-pill ${filterPeriod === p.id ? 'active' : ''}`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {filterPeriod === 'custom' && (
+            <div className="flex-align gap-2 animate-fadeIn">
+              <input
+                type="date"
+                className="input-field py-1 px-2 text-xs"
+                style={{ width: '130px', height: '32px' }}
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+              />
+              <span className="text-xs text-muted">s/d</span>
+              <input
+                type="date"
+                className="input-field py-1 px-2 text-xs"
+                style={{ width: '130px', height: '32px' }}
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -386,26 +494,26 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
             </form>
           </div>
 
-          {/* Grafik Pengeluaran Kategori (Donut SVG) */}
+          {/* Grafik Pengeluaran Kategori (Donut SVG Premium) */}
           <div className="section-card glass-panel p-4">
-            <h3 className="section-title mb-3">Distribusi Pengeluaran</h3>
+            <h3 className="section-title mb-4">Distribusi Pengeluaran</h3>
             {expenseByCategory.length === 0 ? (
               <div className="empty-box p-4 text-center">
                 <AlertTriangle size={28} className="text-muted mb-2" />
-                <p className="text-muted text-sm">Belum ada data pengeluaran terdaftar untuk dianalisis.</p>
+                <p className="text-muted text-sm">Belum ada data pengeluaran terdaftar pada periode ini.</p>
               </div>
             ) : (
-              <div className="flex-align gap-3 flex-wrap">
-                {/* SVG Donut Chart */}
-                <div style={{ position: 'relative', width: '160px', height: '160px' }}>
+              <div className="flex-column gap-4">
+                {/* SVG Donut Chart with Center Text */}
+                <div style={{ position: 'relative', width: '180px', height: '180px', margin: '0 auto' }}>
                   <svg width="100%" height="100%" viewBox="0 0 42 42" className="donut-svg">
-                    <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="rgba(255,255,255,0.03)" strokeWidth="4" />
+                    <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="rgba(255,255,255,0.03)" strokeWidth="4.2" />
                     
                     {(() => {
                       let accumulatedPercentage = 0;
                       return expenseByCategory.map((item, idx) => {
                         const strokeDasharray = `${item.percentage} ${100 - item.percentage}`;
-                        const strokeDashoffset = 100 - accumulatedPercentage + 25; // Mulai dari atas (+25)
+                        const strokeDashoffset = 100 - accumulatedPercentage + 25; // Start from top
                         accumulatedPercentage += item.percentage;
 
                         return (
@@ -416,33 +524,55 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                             r="15.915"
                             fill="transparent"
                             stroke={catColors[idx % catColors.length]}
-                            strokeWidth="4"
+                            strokeWidth="4.2"
                             strokeDasharray={strokeDasharray}
                             strokeDashoffset={strokeDashoffset}
                             className="donut-segment"
+                            style={{ transition: 'stroke-dasharray 0.3s ease, stroke-dashoffset 0.3s ease' }}
                           />
                         );
                       });
                     })()}
                   </svg>
+                  {/* Center Hole Display */}
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Total Keluar</span>
+                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>Rp {summary.expense.toLocaleString()}</span>
+                  </div>
                 </div>
 
-                {/* Donut Legend */}
-                <div className="flex-column gap-1 flex-1" style={{ minWidth: '160px' }}>
-                  {expenseByCategory.slice(0, 5).map((item, idx) => (
-                    <div key={item.category} className="flex-between text-sm">
-                      <div className="flex-align gap-2">
-                        <span 
+                {/* Progress-bar Style Category Distribution */}
+                <div className="flex-column gap-3 mt-2">
+                  <span className="text-xs font-bold text-muted text-uppercase tracking-wider">Breakdown Pengeluaran</span>
+                  {expenseByCategory.map((item, idx) => (
+                    <div key={item.category} className="flex-column gap-1">
+                      <div className="flex-between text-sm">
+                        <div className="flex-align gap-2">
+                          <span 
+                            style={{ 
+                              width: '8px', 
+                              height: '8px', 
+                              borderRadius: '50%', 
+                              backgroundColor: catColors[idx % catColors.length] 
+                            }} 
+                          />
+                          <span className="font-semibold">{item.category}</span>
+                        </div>
+                        <span className="font-semibold text-secondary">
+                          Rp {item.amount.toLocaleString()} ({item.percentage}%)
+                        </span>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '10px', overflow: 'hidden' }}>
+                        <div 
                           style={{ 
-                            width: '8px', 
-                            height: '8px', 
-                            borderRadius: '50%', 
-                            backgroundColor: catColors[idx % catColors.length] 
+                            width: `${item.percentage}%`, 
+                            height: '100%', 
+                            backgroundColor: catColors[idx % catColors.length],
+                            borderRadius: '10px',
+                            transition: 'width 0.4s ease'
                           }} 
                         />
-                        <span className="text-secondary">{item.category}</span>
                       </div>
-                      <span className="font-semibold">{item.percentage}%</span>
                     </div>
                   ))}
                 </div>
@@ -452,7 +582,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
 
           {/* Grafik Batang Perbandingan Cashflow Bulanan */}
           <div className="section-card glass-panel p-4">
-            <h3 className="section-title mb-3">Arus Kas Bulanan</h3>
+            <h3 className="section-title mb-3">Arus Kas Bulanan (6 Bulan Terakhir)</h3>
             <div className="chart-bar-container mt-3" style={{ height: '140px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px' }}>
               {monthlyCashflow.map(month => {
                 const maxVal = Math.max(...monthlyCashflow.map(m => Math.max(m.income, m.expense)), 1);
@@ -502,48 +632,111 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
 
         </div>
 
-        {/* Right Column: Transaction History & Suki Advisor */}
+        {/* Right Column: Transaction History, Suki Advisor, and Top Transactions */}
         <div className="dashboard-col flex-column gap-3">
 
-          {/* AI Suki Financial Advisor */}
-          <div className="section-card glass-panel p-4" style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(59, 130, 246, 0.04) 100%)', border: '1px solid rgba(139, 92, 246, 0.25)' }}>
-            <div className="flex-between mb-3">
-              <h3 className="section-title flex-align gap-2">
-                <Sparkles className="icon-accent" size={18} /> Suki Financial Advisor
-              </h3>
+          {/* AI Suki Financial Advisor (Chat/Terminal Style UI) */}
+          <div className="section-card glass-panel p-0 overflow-hidden" style={{ border: '1px solid rgba(139, 92, 246, 0.25)' }}>
+            {/* Terminal Header */}
+            <div className="flex-between px-4 py-3" style={{ background: 'linear-gradient(90deg, rgba(139, 92, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%)', borderBottom: '1px solid rgba(139, 92, 246, 0.15)' }}>
+              <div className="flex-align gap-2">
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981', display: 'inline-block', boxShadow: '0 0 8px #10b981' }} />
+                <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>🐱 Suki Financial Advisor</span>
+                <span style={{ fontSize: '0.65rem', padding: '2px 6px', borderRadius: '5px', backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)' }}>gemini-2.5</span>
+              </div>
               <button 
-                className="btn btn-secondary btn-sm"
+                className="btn btn-secondary btn-sm py-1 px-3 flex-align gap-1"
+                style={{ fontSize: '0.75rem', height: '28px', margin: 0 }}
                 onClick={handleRequestAiAdvice}
                 disabled={loadingAi}
               >
-                <RefreshCw size={14} className={loadingAi ? 'spin-anim' : ''} /> {loadingAi ? 'Menganalisis...' : 'Minta Saran'}
+                <RefreshCw size={12} className={loadingAi ? 'spin-anim' : ''} /> Minta Analisis
               </button>
             </div>
 
-            {aiAnalysis ? (
-              <div className="ai-response-box p-3 glass-panel" style={{ maxHeight: '320px', overflowY: 'auto' }}>
-                <pre style={{ 
-                  fontFamily: 'var(--font-sans)', 
-                  whiteSpace: 'pre-wrap', 
-                  fontSize: '0.9rem', 
-                  lineHeight: 1.5,
-                  color: 'var(--text-primary)'
-                }}>
-                  {aiAnalysis}
-                </pre>
+            <div className="p-4 flex-column gap-3" style={{ background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.03) 0%, transparent 100%)' }}>
+              {aiAnalysis ? (
+                <div className="ai-chat-bubble p-3 glass-panel animate-fadeIn" style={{ maxHeight: '340px', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                  <pre style={{ 
+                    fontFamily: 'var(--font-sans)', 
+                    whiteSpace: 'pre-wrap', 
+                    fontSize: '0.875rem', 
+                    lineHeight: 1.55,
+                    color: 'var(--text-primary)',
+                    margin: 0
+                  }}>
+                    {aiAnalysis}
+                  </pre>
+                </div>
+              ) : (
+                <div className="empty-box p-4 text-center">
+                  <PiggyBank size={42} className="icon-accent mb-2" style={{ animation: 'logoPulse 2.5s infinite ease-in-out', color: 'var(--primary)' }} />
+                  <p className="text-secondary text-sm font-semibold">Butuh Analisis Keuangan Lo?</p>
+                  <p className="text-muted text-xs mt-1">Suki bakal scan data pengeluaran lo pada periode ini dan kasih insight budget gokil!</p>
+                  <button 
+                    className="btn btn-primary btn-sm mt-3"
+                    onClick={handleRequestAiAdvice}
+                    disabled={loadingAi}
+                  >
+                    Minta Analisis Keuangan Suki
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Top 5 Single Expenses Leaderboard (Analisis Top Pengeluaran) */}
+          <div className="section-card glass-panel p-4">
+            <h3 className="section-title mb-3 flex-align gap-2">
+              <SlidersHorizontal size={18} className="icon-accent" /> Top Pengeluaran Terbesar
+            </h3>
+            {topSingleExpenses.length === 0 ? (
+              <div className="empty-box p-3 text-center">
+                <p className="text-muted text-xs">Belum ada pengeluaran terdaftar pada periode ini.</p>
               </div>
             ) : (
-              <div className="empty-box p-4 text-center">
-                <PiggyBank size={38} className="icon-accent mb-2" style={{ animation: 'logoPulse 2s infinite ease-in-out' }} />
-                <p className="text-secondary text-sm font-semibold">Tanya Keadaan Keuanganmu ke Suki!</p>
-                <p className="text-muted text-xs mt-1">Suki akan memindai riwayat transaksi lo dan kasih saran anggaran gokil biar tabungan lo aman.</p>
-                <button 
-                  className="btn btn-primary btn-sm mt-3"
-                  onClick={handleRequestAiAdvice}
-                  disabled={loadingAi}
-                >
-                  Minta Analisis Keuangan Suki
-                </button>
+              <div className="flex-column gap-2">
+                {topSingleExpenses.map((entry, idx) => {
+                  const styleMeta = getExpenseIcon(entry);
+                  return (
+                    <div 
+                      key={entry.id} 
+                      className="flex-between p-3 glass-panel"
+                      style={{ 
+                        background: 'rgba(255, 255, 255, 0.01)', 
+                        border: '1px solid rgba(255, 255, 255, 0.03)',
+                        transition: 'transform 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'translateX(3px)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
+                    >
+                      <div className="flex-align gap-3">
+                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', width: '15px' }}>{idx + 1}.</span>
+                        <div 
+                          style={{ 
+                            width: '30px', 
+                            height: '30px', 
+                            borderRadius: '8px', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            backgroundColor: styleMeta.bg,
+                            color: styleMeta.color
+                          }}
+                        >
+                          {styleMeta.icon}
+                        </div>
+                        <div className="flex-column">
+                          <span className="font-semibold text-sm">{entry.description}</span>
+                          <span className="text-xs text-muted">{entry.category} • {entry.date}</span>
+                        </div>
+                      </div>
+                      <span className="font-bold text-sm text-danger">
+                        - Rp {entry.amount.toLocaleString()}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -601,7 +794,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                 filteredEntries.map(entry => (
                   <div key={entry.id} className="transaction-list-item flex-between p-3 glass-panel">
                     <div className="flex-align gap-2">
-                      <div className={`transaction-icon-indicator ${entry.type === 'income' ? 'icon-emerald' : 'icon-destructive'}`} style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifycontent: 'center' }}>
+                      <div className={`transaction-icon-indicator ${entry.type === 'income' ? 'icon-emerald' : 'icon-destructive'}`} style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {entry.type === 'income' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
                       </div>
                       <div className="flex-column">
@@ -659,6 +852,29 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
           background: linear-gradient(135deg, #ffffff 40%, #a855f7 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
+        }
+        .period-filter-pill {
+          padding: 0.4rem 0.85rem;
+          border-radius: 20px;
+          border: 1px solid var(--border-color);
+          background: rgba(255, 255, 255, 0.02);
+          color: var(--text-secondary);
+          font-size: 0.8rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .period-filter-pill:hover {
+          border-color: var(--primary-light);
+          color: var(--text-primary);
+        }
+        .period-filter-pill.active {
+          background: var(--primary-light);
+          color: var(--primary);
+          border-color: var(--primary);
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
         }
       `}</style>
     </div>
