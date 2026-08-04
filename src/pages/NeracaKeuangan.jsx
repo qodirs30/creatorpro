@@ -1538,97 +1538,172 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                       <p className="text-muted text-sm">Tidak ada transaksi ditemukan.</p>
                     </div>
                   ) : (
-                    <div style={{ overflowX: 'auto', width: '100%' }}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                        <thead>
-                          <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: 'var(--text-secondary)' }}>
-                            <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Tanggal & Jam</th>
-                            <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Keterangan</th>
-                            <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Kategori</th>
-                            <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Tipe</th>
-                            <th style={{ textAlign: 'right', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Nominal</th>
-                            <th style={{ textAlign: 'center', padding: '0.6rem 0.5rem', width: '40px' }}>Aksi</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredEntries.map(entry => {
-                            const dateObj = new Date(entry.createdAt || entry.date);
-                            const formattedDate = dateObj.toLocaleDateString('id-ID', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: '2-digit'
-                            });
-                            const formattedTime = dateObj.toLocaleTimeString('id-ID', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            });
-                            const isIncome = entry.type === 'income';
+                    <>
+                      {/* Desktop View Table */}
+                      <div className="desktop-only-table" style={{ width: '100%' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: 'var(--text-secondary)' }}>
+                              <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Tanggal & Jam</th>
+                              <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Keterangan</th>
+                              <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Kategori</th>
+                              <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Tipe</th>
+                              <th style={{ textAlign: 'right', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Nominal</th>
+                              <th style={{ textAlign: 'center', padding: '0.6rem 0.5rem', width: '40px' }}>Aksi</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredEntries.map(entry => {
+                              const dateObj = new Date(entry.createdAt || entry.date);
+                              const formattedDate = dateObj.toLocaleDateString('id-ID', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: '2-digit'
+                              });
+                              const formattedTime = dateObj.toLocaleTimeString('id-ID', {
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              });
+                              const isIncome = entry.type === 'income';
 
-                            return (
-                              <tr 
-                                key={entry.id} 
-                                className="table-row-hover"
-                                style={{ 
-                                  borderBottom: '1px solid rgba(255, 255, 255, 0.03)',
-                                  transition: 'background-color 0.2s'
-                                }}
-                              >
-                                <td style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
-                                  {formattedDate} {formattedTime !== '00.00' && formattedTime !== '00:00' && formattedTime !== '00.00.00' ? formattedTime : ''}
-                                </td>
-                                <td style={{ padding: '0.75rem 0.5rem', fontWeight: 500, color: 'var(--text-primary)' }}>
-                                  {entry.description}
-                                </td>
-                                <td style={{ padding: '0.75rem 0.5rem' }}>
-                                  <span style={{ 
-                                    padding: '2px 8px', 
-                                    borderRadius: '6px', 
-                                    backgroundColor: 'rgba(255,255,255,0.03)', 
-                                    color: 'var(--text-secondary)',
-                                    fontSize: '0.72rem',
-                                    fontWeight: 500
+                              return (
+                                <tr 
+                                  key={entry.id} 
+                                  className="table-row-hover"
+                                  style={{ 
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.03)',
+                                    transition: 'background-color 0.2s'
+                                  }}
+                                >
+                                  <td style={{ padding: '0.75rem 0.5rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                                    {formattedDate} {formattedTime !== '00.00' && formattedTime !== '00:00' && formattedTime !== '00.00.00' ? formattedTime : ''}
+                                  </td>
+                                  <td style={{ padding: '0.75rem 0.5rem', fontWeight: 500, color: 'var(--text-primary)' }}>
+                                    {entry.description}
+                                  </td>
+                                  <td style={{ padding: '0.75rem 0.5rem' }}>
+                                    <span style={{ 
+                                      padding: '2px 8px', 
+                                      borderRadius: '6px', 
+                                      backgroundColor: 'rgba(255,255,255,0.03)', 
+                                      color: 'var(--text-secondary)',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 500
+                                    }}>
+                                      {entry.category}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '0.75rem 0.5rem' }}>
+                                    <span style={{ 
+                                      padding: '2px 8px', 
+                                      borderRadius: '6px', 
+                                      backgroundColor: isIncome ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)', 
+                                      color: isIncome ? 'var(--success)' : 'var(--danger)',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 600
+                                    }}>
+                                      {isIncome ? 'Pemasukan' : 'Pengeluaran'}
+                                    </span>
+                                  </td>
+                                  <td style={{ 
+                                    padding: '0.75rem 0.5rem', 
+                                    textAlign: 'right', 
+                                    fontWeight: 700,
+                                    color: isIncome ? 'var(--success)' : 'var(--danger)'
                                   }}>
-                                    {entry.category}
-                                  </span>
-                                </td>
-                                <td style={{ padding: '0.75rem 0.5rem' }}>
-                                  <span style={{ 
-                                    padding: '2px 8px', 
-                                    borderRadius: '6px', 
-                                    backgroundColor: isIncome ? 'rgba(16, 185, 129, 0.08)' : 'rgba(244, 63, 94, 0.08)', 
-                                    color: isIncome ? 'var(--success)' : 'var(--danger)',
-                                    fontSize: '0.72rem',
-                                    fontWeight: 600
-                                  }}>
-                                    {isIncome ? 'Pemasukan' : 'Pengeluaran'}
-                                  </span>
-                                </td>
-                                <td style={{ 
-                                  padding: '0.75rem 0.5rem', 
-                                  textAlign: 'right', 
-                                  fontWeight: 700,
-                                  color: isIncome ? 'var(--success)' : 'var(--danger)'
+                                    {isIncome ? '+' : '-'} Rp {entry.amount.toLocaleString()}
+                                  </td>
+                                  <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
+                                    <button
+                                      className="btn-icon"
+                                      onClick={() => deleteFinancialEntry(entry.id)}
+                                      style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', opacity: 0.7 }}
+                                      title="Hapus Transaksi"
+                                      onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                                      onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+                                    >
+                                      <Trash2 size={13} className="text-danger" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile View Stacked Cards */}
+                      <div className="mobile-only-list" style={{ width: '100%' }}>
+                        {filteredEntries.map(entry => {
+                          const dateObj = new Date(entry.createdAt || entry.date);
+                          const formattedDate = dateObj.toLocaleDateString('id-ID', {
+                            day: '2-digit',
+                            month: 'short'
+                          });
+                          const formattedTime = dateObj.toLocaleTimeString('id-ID', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          });
+                          const isIncome = entry.type === 'income';
+
+                          return (
+                            <div 
+                              key={entry.id} 
+                              style={{
+                                background: 'rgba(255, 255, 255, 0.01)',
+                                border: '1px solid rgba(255, 255, 255, 0.03)',
+                                borderRadius: '14px',
+                                padding: '0.75rem 0.85rem',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                marginBottom: '0.4rem'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', minWidth: 0, flex: 1 }}>
+                                <div style={{ 
+                                  width: '30px', 
+                                  height: '30px', 
+                                  borderRadius: '50%', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center', 
+                                  backgroundColor: isIncome ? 'rgba(16,185,129,0.08)' : 'rgba(244,63,94,0.08)', 
+                                  color: isIncome ? 'var(--success)' : 'var(--danger)',
+                                  flexShrink: 0
                                 }}>
+                                  {isIncome ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                                  <span style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                                    {entry.description}
+                                  </span>
+                                  <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', display: 'flex', gap: '0.35rem', alignItems: 'center', marginTop: '2px' }}>
+                                    <span style={{ padding: '0px 4px', borderRadius: '3px', backgroundColor: 'rgba(255,255,255,0.04)' }}>{entry.category}</span>
+                                    <span>•</span>
+                                    <span>{formattedDate} {formattedTime !== '00.00' && formattedTime !== '00:00' ? formattedTime : ''}</span>
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexShrink: 0 }}>
+                                <span style={{ fontWeight: 700, fontSize: '0.8rem', color: isIncome ? 'var(--success)' : 'var(--danger)' }}>
                                   {isIncome ? '+' : '-'} Rp {entry.amount.toLocaleString()}
-                                </td>
-                                <td style={{ padding: '0.75rem 0.5rem', textAlign: 'center' }}>
-                                  <button
-                                    className="btn-icon"
-                                    onClick={() => deleteFinancialEntry(entry.id)}
-                                    style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', opacity: 0.7 }}
-                                    title="Hapus Transaksi"
-                                    onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-                                    onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
-                                  >
-                                    <Trash2 size={13} className="text-danger" />
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                                </span>
+                                <button
+                                  onClick={() => deleteFinancialEntry(entry.id)}
+                                  style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0 }}
+                                  title="Hapus"
+                                >
+                                  <Trash2 size={13} className="text-danger" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -1889,8 +1964,8 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                           >
                             {b.isPaid ? <CheckCircle size={20} /> : <XCircle size={20} />}
                           </button>
-                          <div className="flex-column">
-                            <span className="font-semibold text-sm" style={{ textDecoration: b.isPaid ? 'line-through' : 'none', color: b.isPaid ? 'var(--text-secondary)' : 'var(--text-primary)' }}>{b.name}</span>
+                          <div className="flex-column" style={{ minWidth: 0 }}>
+                            <span className="font-semibold text-sm" style={{ textDecoration: b.isPaid ? 'line-through' : 'none', color: b.isPaid ? 'var(--text-secondary)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', maxWidth: '130px' }}>{b.name}</span>
                             <span className="text-xs text-muted">Jatuh Tempo: {b.dueDate}</span>
                           </div>
                         </div>
@@ -1982,8 +2057,8 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                           >
                             {d.isResolved ? <CheckCircle size={20} /> : <XCircle size={20} />}
                           </button>
-                          <div className="flex-column">
-                            <span className="font-semibold text-sm" style={{ textDecoration: d.isResolved ? 'line-through' : 'none', color: d.isResolved ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
+                          <div className="flex-column" style={{ minWidth: 0 }}>
+                            <span className="font-semibold text-sm" style={{ textDecoration: d.isResolved ? 'line-through' : 'none', color: d.isResolved ? 'var(--text-secondary)' : 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', maxWidth: '130px' }}>
                               {d.type === 'owe' ? '🔴 Utang: ' : '🟢 Piutang: '} {d.description}
                             </span>
                             <span className="text-xs text-muted">Jatuh Tempo: {d.dueDate}</span>
@@ -2079,8 +2154,8 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                           <div style={{ width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: w.type === 'investment' ? 'rgba(139,92,246,0.1)' : 'rgba(59,130,246,0.1)', color: w.type === 'investment' ? 'var(--accent)' : 'var(--primary)' }}>
                             {w.type === 'bank' ? '🏦' : w.type === 'e-wallet' ? '📱' : w.type === 'cash' ? '💵' : '📈'}
                           </div>
-                          <div className="flex-column">
-                            <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{w.name}</span>
+                          <div className="flex-column" style={{ minWidth: 0 }}>
+                            <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', maxWidth: '130px' }}>{w.name}</span>
                             <span className="text-xs text-muted" style={{ textTransform: 'uppercase' }}>{w.type}</span>
                           </div>
                         </div>
@@ -2204,6 +2279,22 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
         @media (max-width: 768px) {
           .page-container {
             padding: 1rem 0.5rem !important;
+          }
+        }
+        .desktop-only-table {
+          display: block;
+        }
+        .mobile-only-list {
+          display: none;
+        }
+        @media (max-width: 768px) {
+          .desktop-only-table {
+            display: none !important;
+          }
+          .mobile-only-list {
+            display: flex !important;
+            flex-direction: column;
+            gap: 0.4rem;
           }
         }
         .donut-svg {
