@@ -134,11 +134,18 @@ const useAppStore = create(
           ...state.financialEntries
         ]
       })),
+      addMultipleFinancialEntries: (entries) => set((state) => ({
+        financialEntries: [
+          ...entries,
+          ...state.financialEntries
+        ]
+      })),
       updateFinancialEntry: (id, updates) => set((state) => ({
         financialEntries: state.financialEntries.map(e => e.id === id ? { ...e, ...updates } : e)
       })),
       deleteFinancialEntry: (id) => set((state) => ({
-        financialEntries: state.financialEntries.filter(e => e.id !== id)
+        financialEntries: state.financialEntries.filter(e => e.id !== id),
+        memexCards: state.memexCards.filter(c => String(c.id) !== String(id))
       })),
       clearFinancialEntries: () => set({ financialEntries: [] }),
 

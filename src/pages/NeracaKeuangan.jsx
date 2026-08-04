@@ -11,6 +11,7 @@ export default function NeracaKeuangan() {
   const { 
     financialEntries = [], 
     addFinancialEntry, 
+    addMultipleFinancialEntries,
     deleteFinancialEntry,
     geminiKey, 
     groqKey,
@@ -39,6 +40,7 @@ export default function NeracaKeuangan() {
     const transactionsFromMemex = memexCards.filter(c => c.type === 'transaction');
     if (transactionsFromMemex.length === 0) return;
 
+    const toMigrate = [];
     transactionsFromMemex.forEach(c => {
       // Periksa apakah transaksi ini sudah dimigrasi ke financialEntries
       const isAlreadyMigrated = financialEntries.some(e => 
@@ -49,7 +51,7 @@ export default function NeracaKeuangan() {
       );
 
       if (!isAlreadyMigrated) {
-        addFinancialEntry({
+        toMigrate.push({
           id: c.id, // Pertahankan ID asli
           type: c.data?.type || 'expense',
           category: c.data?.category || 'Lainnya',
@@ -60,7 +62,11 @@ export default function NeracaKeuangan() {
         });
       }
     });
-  }, [memexCards, financialEntries, addFinancialEntry]);
+
+    if (toMigrate.length > 0) {
+      addMultipleFinancialEntries(toMigrate);
+    }
+  }, [memexCards, financialEntries, addMultipleFinancialEntries]);
 
   // Filtering / Search States
   const [searchTerm, setSearchTerm] = useState('');
