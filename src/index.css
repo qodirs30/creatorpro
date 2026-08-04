@@ -1107,7 +1107,7 @@ input, textarea, select {
   left: 0;
   right: 0;
   bottom: 0;
-  backgroundColor: rgba(79, 70, 229, 0.1);
+  background-color: rgba(79, 70, 229, 0.1);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -1770,6 +1770,98 @@ input, textarea, select {
     flex: none !important;
   }
 }
+
+/* ==========================================================================
+   NERACA KEUANGAN (FINANCIAL DASHBOARD) STYLES
+   ========================================================================== */
+
+.neraca-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.neraca-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.neraca-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary-light);
+  box-shadow: var(--shadow-md);
+}
+
+.neraca-card-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.neraca-card-icon.icon-purple {
+  background: rgba(139, 92, 246, 0.1);
+  color: #a855f7;
+}
+
+.neraca-card-icon.icon-emerald {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.neraca-card-icon.icon-destructive {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.neraca-card-icon.icon-blue {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.neraca-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.neraca-lbl {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.neraca-val {
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.dashboard-content-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .dashboard-content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 
 

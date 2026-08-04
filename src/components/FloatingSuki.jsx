@@ -19,7 +19,7 @@ export default function FloatingSuki() {
     memexCompanion, sukiKnowledge, memexCards,
     geminiKey, groqKey, openAiKey,
     aiProvider, aiModel, addMemexCard,
-    habits, activityLog, updateMemexCard, deleteMemexCard
+    habits, activityLog, updateMemexCard, deleteMemexCard, financialEntries
   } = useAppStore();
 
   const getApiKey = () => {
@@ -240,7 +240,20 @@ export default function FloatingSuki() {
         });
       } else {
         // Kirim SEMUA kartu sebagai konteks database Suki (bukan hanya beberapa terbaru)
-        const allCards = memexCards || [];
+        const allCards = [
+          ...(memexCards || []),
+          ...(financialEntries || []).map(entry => ({
+            id: entry.id,
+            createdAt: entry.createdAt,
+            type: 'transaction',
+            title: entry.description,
+            data: {
+              type: entry.type,
+              category: entry.category,
+              amount: entry.amount
+            }
+          }))
+        ];
         const reply = await generateCompanionChat(
           apiKey,
           memexCompanion,
@@ -527,8 +540,8 @@ export default function FloatingSuki() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', alignSelf: 'flex-start' }}>
                 <div style={{ padding: '0.65rem 0.85rem', borderRadius: '16px 16px 16px 4px', background: 'rgba(255, 255, 255, 0.06)', display: 'flex', gap: '4px', alignItems: 'center' }}>
                   <span className="dot" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#94a3b8', animation: 'bounceDot 1.4s infinite ease-in-out' }} />
-                  <span className="dot" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#94a3b8', animation: 'bounceDot 1.4s infinite ease-in-out 0.2s' }} style={{ animationDelay: '0.2s' }} />
-                  <span className="dot" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#94a3b8', animation: 'bounceDot 1.4s infinite ease-in-out 0.4s' }} style={{ animationDelay: '0.4s' }} />
+                  <span className="dot" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#94a3b8', animation: 'bounceDot 1.4s infinite ease-in-out 0.2s', animationDelay: '0.2s' }} />
+                  <span className="dot" style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#94a3b8', animation: 'bounceDot 1.4s infinite ease-in-out 0.4s', animationDelay: '0.4s' }} />
                 </div>
               </div>
             )}

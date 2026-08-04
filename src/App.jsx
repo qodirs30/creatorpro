@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Calendar, Edit3, Settings, LogOut, LayoutDashboard, Target, Wand2, Menu, X, Hash, Sparkles, Code, Video, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { Home, Calendar, Edit3, Settings, LogOut, LayoutDashboard, Target, Wand2, Menu, X, Hash, Sparkles, Code, Video, Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle, TrendingUp } from 'lucide-react';
 import useAppStore from './store/useAppStore';
 import './index.css';
 
@@ -32,7 +32,7 @@ import SocialPlanner from './pages/SocialPlanner';
 import HabitTracker from './pages/HabitTracker';
 import MegaPrompt from './pages/MegaPrompt';
 import ClickCounter from './pages/ClickCounter';
-import MemexJournal from './pages/MemexJournal';
+import NeracaKeuangan from './pages/NeracaKeuangan';
 import VibeCoder from './pages/VibeCoder';
 import MegaCreator from './pages/MegaCreator';
 
@@ -52,7 +52,7 @@ function Sidebar({ isOpen, onClose }) {
 
   const navItems = [
     { name: 'Beranda', path: '/', icon: <Home size={20} /> },
-    { name: 'Card Cloud Journal', path: '/memex', icon: <Sparkles size={20} /> },
+    { name: 'Neraca Keuangan', path: '/memex', icon: <TrendingUp size={20} /> },
     { name: 'Pelacak Kebiasaan', path: '/habits', icon: <Target size={20} /> },
     { name: 'Mega Prompt', path: '/mega-prompt', icon: <Wand2 size={20} /> },
     { name: 'Click Counter', path: '/counter', icon: <Hash size={20} /> },
@@ -255,6 +255,7 @@ function AppLayout() {
     
     // Initialize lastStateRef with current values
     lastStateRef.current = {
+      financialEntries: useAppStore.getState().financialEntries || [],
       memexCards: useAppStore.getState().memexCards || [],
       habits: useAppStore.getState().habits || [],
       scripts: useAppStore.getState().scripts || [],
@@ -277,7 +278,7 @@ function AppLayout() {
     let timeoutId;
     const unsubscribe = useAppStore.subscribe((state) => {
       const keysToCheck = [
-        'memexCards', 'habits', 'scripts', 'socialPosts', 'counters', 'activityLog', 'history', 'sukiKnowledge', 'memexChats',
+        'financialEntries', 'memexCards', 'habits', 'scripts', 'socialPosts', 'counters', 'activityLog', 'history', 'sukiKnowledge', 'memexChats',
         'geminiKey', 'groqKey', 'openAiKey', 'klingAccessKey', 'klingSecretKey', 'aiProvider', 'aiModel', 'enablePinLock', 'pin'
       ];
       const hasChanged = keysToCheck.some(key => state[key] !== lastStateRef.current[key]);
@@ -285,6 +286,7 @@ function AppLayout() {
       if (hasChanged) {
         // Update ref
         lastStateRef.current = {
+          financialEntries: state.financialEntries || [],
           memexCards: state.memexCards || [],
           habits: state.habits || [],
           scripts: state.scripts || [],
@@ -348,7 +350,7 @@ function AppLayout() {
       <main className="main-content">
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/memex" element={<MemexJournal />} />
+          <Route path="/memex" element={<NeracaKeuangan />} />
           <Route path="/habits" element={<HabitTracker />} />
           <Route path="/mega-prompt" element={<MegaPrompt />} />
           <Route path="/counter" element={<ClickCounter />} />
@@ -413,6 +415,7 @@ const mergeData = (local, cloud) => {
   };
 
   return {
+    financialEntries: mergeArray(local?.financialEntries, cloud?.financialEntries),
     memexCards: mergeArray(local?.memexCards, cloud?.memexCards),
     habits: mergeArray(local?.habits, cloud?.habits),
     scripts: mergeArray(local?.scripts, cloud?.scripts),
@@ -483,6 +486,7 @@ function AuthGate({ children }) {
         try {
           const state = useAppStore.getState();
           const localData = {
+            financialEntries: state.financialEntries || [],
             memexCards: state.memexCards || [],
             habits: state.habits || [],
             scripts: state.scripts || [],
@@ -536,6 +540,7 @@ function AuthGate({ children }) {
         if (cloudData) {
           const state = useAppStore.getState();
           const localData = {
+            financialEntries: state.financialEntries || [],
             memexCards: state.memexCards || [],
             habits: state.habits || [],
             scripts: state.scripts || [],

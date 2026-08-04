@@ -122,6 +122,26 @@ const useAppStore = create(
         counters: state.counters.filter(c => c.id !== id)
       })),
 
+      // ================= NERACA KEUANGAN =================
+      financialEntries: [],
+      addFinancialEntry: (entry) => set((state) => ({
+        financialEntries: [
+          {
+            id: Date.now().toString(),
+            createdAt: new Date().toISOString(),
+            ...entry
+          },
+          ...state.financialEntries
+        ]
+      })),
+      updateFinancialEntry: (id, updates) => set((state) => ({
+        financialEntries: state.financialEntries.map(e => e.id === id ? { ...e, ...updates } : e)
+      })),
+      deleteFinancialEntry: (id) => set((state) => ({
+        financialEntries: state.financialEntries.filter(e => e.id !== id)
+      })),
+      clearFinancialEntries: () => set({ financialEntries: [] }),
+
       // ================= MEMEX JOURNAL & COMPANION =================
       memexCards: [],
       addMemexCard: (card) => set((state) => ({
@@ -190,6 +210,7 @@ const useAppStore = create(
       })),
       clearHistory: () => set({ history: [] }),
       restoreBackup: (data) => set({
+        financialEntries: data.financialEntries || [],
         memexCards: data.memexCards || [],
         habits: data.habits || [],
         scripts: data.scripts || [],
