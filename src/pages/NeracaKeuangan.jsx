@@ -8,6 +8,91 @@ import {
 import useAppStore from '../store/useAppStore';
 import { generateContent } from '../utils/ai';
 
+// Helper to format Suki AI Advice dynamically as rich react components
+const renderFormattedAdvice = (text) => {
+  if (!text) return null;
+  
+  const lines = text.split('\n');
+  return lines.map((line, idx) => {
+    const trimmed = line.trim();
+    if (!trimmed) return <div key={idx} style={{ height: '0.75rem' }} />;
+    
+    // Check for subheadings (e.g. ### atau ## atau **judul**)
+    if (trimmed.startsWith('###') || trimmed.startsWith('##') || (trimmed.startsWith('**') && trimmed.endsWith('**'))) {
+      const cleanText = trimmed.replace(/[#*]/g, '');
+      return (
+        <h4 
+          key={idx} 
+          style={{ 
+            fontSize: '0.95rem', 
+            fontWeight: 700, 
+            margin: '1.25rem 0 0.5rem 0', 
+            color: 'var(--primary)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem' 
+          }}
+        >
+          <Sparkles size={14} className="text-accent" /> {cleanText}
+        </h4>
+      );
+    }
+    
+    // Check for bullet points (e.g. - atau * atau angka 1.)
+    if (trimmed.startsWith('-') || trimmed.startsWith('*') || /^\d+\./.test(trimmed)) {
+      const isNumbered = /^\d+\./.test(trimmed);
+      const prefix = isNumbered ? trimmed.match(/^\d+\./)[0] : '•';
+      const cleanText = trimmed.replace(/^[-*\d.]+\s*/, '').replace(/\*\*(.*?)\*\*/g, '$1');
+      
+      const boldRegex = /\*\*(.*?)\*\*/g;
+      const parts = [];
+      let lastIndex = 0;
+      let match;
+      while ((match = boldRegex.exec(cleanText)) !== null) {
+        if (match.index > lastIndex) {
+          parts.push(cleanText.substring(lastIndex, match.index));
+        }
+        parts.push(<strong key={match.index} style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{match[1]}</strong>);
+        lastIndex = boldRegex.lastIndex;
+      }
+      if (lastIndex < cleanText.length) {
+        parts.push(cleanText.substring(lastIndex));
+      }
+
+      return (
+        <div key={idx} style={{ display: 'flex', gap: '0.5rem', margin: '0.5rem 0', fontSize: '0.875rem', color: 'var(--text-secondary)', alignItems: 'flex-start', lineHeight: 1.55 }}>
+          <span style={{ color: 'var(--accent)', fontWeight: 'bold', marginTop: isNumbered ? '1px' : '2px', fontSize: isNumbered ? '0.75rem' : '1rem' }}>
+            {prefix}
+          </span>
+          <div style={{ flex: 1 }}>{parts.length > 0 ? parts : cleanText}</div>
+        </div>
+      );
+    }
+
+    // Normal paragraph with markdown bold translation
+    const boldRegex = /\*\*(.*?)\*\*/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    while ((match = boldRegex.exec(trimmed)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(trimmed.substring(lastIndex, match.index));
+      }
+      parts.push(<strong key={match.index} style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{match[1]}</strong>);
+      lastIndex = boldRegex.lastIndex;
+    }
+    if (lastIndex < trimmed.length) {
+      parts.push(trimmed.substring(lastIndex));
+    }
+
+    return (
+      <p key={idx} style={{ fontSize: '0.875rem', lineHeight: 1.55, margin: '0.6rem 0', color: 'var(--text-secondary)' }}>
+        {parts.length > 0 ? parts : trimmed}
+      </p>
+    );
+  });
+};
+
 export default function NeracaKeuangan() {
   const { 
     financialEntries = [], 
@@ -192,16 +277,16 @@ export default function NeracaKeuangan() {
     const desc = entry.description.toLowerCase();
     const cat = entry.category.toLowerCase();
     
-    if (desc.includes('kopi') || desc.includes('coffee') || desc.includes('starbucks') || desc.includes('cafe')) {
+    if (desc.includes('kopi') || desc.includes('coffee') || desc.includes('starbucks') || desc.includes('cafe') || desc.includes('boba')) {
       return { icon: <Coffee size={15} />, color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' };
     }
-    if (desc.includes('makan') || desc.includes('food') || cat.includes('makanan') || desc.includes('warteg') || desc.includes('go-food')) {
+    if (desc.includes('makan') || desc.includes('food') || cat.includes('makanan') || desc.includes('warteg') || desc.includes('go-food') || desc.includes('grabfood') || desc.includes('restoran')) {
       return { icon: <Utensils size={15} />, color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' };
     }
-    if (desc.includes('belanja') || desc.includes('shopping') || cat.includes('belanja') || desc.includes('beli') || desc.includes('baju')) {
+    if (desc.includes('belanja') || desc.includes('shopping') || cat.includes('belanja') || desc.includes('beli') || desc.includes('baju') || desc.includes('gadget') || desc.includes('sepatu')) {
       return { icon: <ShoppingBag size={15} />, color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.1)' };
     }
-    if (desc.includes('tagihan') || desc.includes('listrik') || cat.includes('tagihan') || desc.includes('pulsa') || desc.includes('wifi')) {
+    if (desc.includes('tagihan') || desc.includes('listrik') || cat.includes('tagihan') || desc.includes('pulsa') || desc.includes('wifi') || desc.includes('kuota') || desc.includes('kos')) {
       return { icon: <CreditCard size={15} />, color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.1)' };
     }
     return { icon: <DollarSign size={15} />, color: '#ef4444', bg: 'rgba(239, 68, 68, 0.1)' };
@@ -295,12 +380,27 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
   // Palet Warna Grafik Kategori
   const catColors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899'];
 
+  // Style helper for filter pills
+  const getPillStyle = (active) => ({
+    padding: '0.45rem 1rem',
+    borderRadius: '999px',
+    border: '1px solid',
+    borderColor: active ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: active ? 'var(--primary-light)' : 'rgba(255, 255, 255, 0.01)',
+    color: active ? 'var(--primary)' : 'var(--text-secondary)',
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+    boxShadow: active ? '0 4px 12px rgba(99, 102, 241, 0.12)' : 'none',
+  });
+
   return (
-    <div className="page-container">
+    <div className="page-container" style={{ padding: '2rem 1.5rem', maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
-      <div className="page-header flex-between flex-wrap gap-2">
+      <div className="page-header flex-between flex-wrap gap-2" style={{ marginBottom: '2rem' }}>
         <div>
-          <h1 className="page-title flex-align gap-2">
+          <h1 className="page-title flex-align gap-2" style={{ fontSize: '1.85rem' }}>
             <Wallet className="icon-accent" size={26} /> Neraca Keuangan Studio
           </h1>
           <p className="page-subtitle">Kelola kas bulanan, lacak pengeluaran, dan dapatkan analisis anggaran dari AI Suki.</p>
@@ -308,11 +408,11 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
       </div>
 
       {/* Sleek Period Filter Bar */}
-      <div className="period-filter-bar glass-panel p-3 mb-4">
+      <div className="card" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', transform: 'none' }}>
         <div className="flex-between flex-wrap gap-3">
           <div className="flex-align gap-2 flex-wrap">
             <CalendarDays size={16} className="text-secondary" />
-            <span className="text-sm font-semibold text-secondary mr-2">Filter Periode:</span>
+            <span className="text-xs font-bold text-secondary mr-2 text-uppercase tracking-wider">Filter Periode:</span>
             {[
               { id: 'all', label: 'Semua Waktu' },
               { id: 'this-month', label: 'Bulan Ini' },
@@ -323,7 +423,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
               <button
                 key={p.id}
                 onClick={() => setFilterPeriod(p.id)}
-                className={`period-filter-pill ${filterPeriod === p.id ? 'active' : ''}`}
+                style={getPillStyle(filterPeriod === p.id)}
               >
                 {p.label}
               </button>
@@ -354,7 +454,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
 
       {/* Bento Grid Summary Cards */}
       <div className="neraca-grid">
-        <div className="neraca-card">
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', minHeight: '90px' }}>
           <div className="neraca-card-icon icon-purple">
             <Wallet size={22} />
           </div>
@@ -366,7 +466,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
           </div>
         </div>
 
-        <div className="neraca-card">
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', minHeight: '90px' }}>
           <div className="neraca-card-icon icon-emerald">
             <ArrowUpRight size={22} />
           </div>
@@ -378,7 +478,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
           </div>
         </div>
 
-        <div className="neraca-card">
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', minHeight: '90px' }}>
           <div className="neraca-card-icon icon-destructive">
             <ArrowDownRight size={22} />
           </div>
@@ -390,7 +490,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
           </div>
         </div>
 
-        <div className="neraca-card">
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', minHeight: '90px' }}>
           <div className="neraca-card-icon icon-blue">
             <PiggyBank size={22} />
           </div>
@@ -404,20 +504,21 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
       </div>
 
       {/* Main Layout Grid */}
-      <div className="dashboard-content-grid">
+      <div className="dashboard-content-grid" style={{ marginTop: '1.5rem' }}>
         {/* Left Column: Entry Form & Analytics Charts */}
         <div className="dashboard-col flex-column gap-3">
           
           {/* Form Pencatatan Cepat */}
-          <div className="section-card glass-panel p-4">
-            <h3 className="section-title mb-3">Catat Transaksi Baru</h3>
+          <div className="card" style={{ transform: 'none' }}>
+            <h3 className="section-title mb-3" style={{ fontSize: '1.1rem' }}>Catat Transaksi Baru</h3>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div className="auth-tabs-container" style={{ marginBottom: '0.5rem' }}>
+              <div className="auth-tabs-container" style={{ marginBottom: '0.25rem', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
                 <div 
                   className="auth-tab-active-pill" 
                   style={{
                     width: '50%',
-                    transform: `translateX(${type === 'expense' ? '0%' : '100%'})`
+                    transform: `translateX(${type === 'expense' ? '0%' : '100%'})`,
+                    transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
                   }}
                 />
                 <button 
@@ -437,7 +538,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Nominal (Rupiah)</label>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Nominal (Rupiah)</label>
                 <input
                   type="number"
                   className="input-field"
@@ -451,7 +552,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Kategori</label>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Kategori</label>
                   <select 
                     className="input-field"
                     value={category} 
@@ -465,7 +566,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                 </div>
 
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Tanggal</label>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Tanggal</label>
                   <input
                     type="date"
                     className="input-field"
@@ -478,7 +579,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Deskripsi / Catatan (Opsional)</label>
+                <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Deskripsi / Catatan (Opsional)</label>
                 <input
                   type="text"
                   className="input-field"
@@ -488,15 +589,15 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                 />
               </div>
 
-              <button type="submit" className="btn btn-primary w-full mt-2" style={{ padding: '0.85rem' }}>
+              <button type="submit" className="btn btn-primary w-full mt-2" style={{ padding: '0.85rem', borderRadius: '14px', fontSize: '0.9rem', fontWeight: 600 }}>
                 <Plus size={18} /> Tambah Transaksi
               </button>
             </form>
           </div>
 
           {/* Grafik Pengeluaran Kategori (Donut SVG Premium) */}
-          <div className="section-card glass-panel p-4">
-            <h3 className="section-title mb-4">Distribusi Pengeluaran</h3>
+          <div className="card" style={{ transform: 'none' }}>
+            <h3 className="section-title mb-4" style={{ fontSize: '1.1rem' }}>Distribusi Pengeluaran</h3>
             {expenseByCategory.length === 0 ? (
               <div className="empty-box p-4 text-center">
                 <AlertTriangle size={28} className="text-muted mb-2" />
@@ -536,8 +637,8 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                   </svg>
                   {/* Center Hole Display */}
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Total Keluar</span>
-                    <span style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>Rp {summary.expense.toLocaleString()}</span>
+                    <span style={{ fontSize: '0.65rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>Total Keluar</span>
+                    <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '2px' }}>Rp {summary.expense.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -556,9 +657,9 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                               backgroundColor: catColors[idx % catColors.length] 
                             }} 
                           />
-                          <span className="font-semibold">{item.category}</span>
+                          <span className="font-semibold" style={{ fontSize: '0.85rem' }}>{item.category}</span>
                         </div>
-                        <span className="font-semibold text-secondary">
+                        <span className="font-semibold text-secondary" style={{ fontSize: '0.85rem' }}>
                           Rp {item.amount.toLocaleString()} ({item.percentage}%)
                         </span>
                       </div>
@@ -581,8 +682,8 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
           </div>
 
           {/* Grafik Batang Perbandingan Cashflow Bulanan */}
-          <div className="section-card glass-panel p-4">
-            <h3 className="section-title mb-3">Arus Kas Bulanan (6 Bulan Terakhir)</h3>
+          <div className="card" style={{ transform: 'none' }}>
+            <h3 className="section-title mb-3" style={{ fontSize: '1.1rem' }}>Arus Kas Bulanan (6 Bulan Terakhir)</h3>
             <div className="chart-bar-container mt-3" style={{ height: '140px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: '8px' }}>
               {monthlyCashflow.map(month => {
                 const maxVal = Math.max(...monthlyCashflow.map(m => Math.max(m.income, m.expense)), 1);
@@ -636,7 +737,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
         <div className="dashboard-col flex-column gap-3">
 
           {/* AI Suki Financial Advisor (Chat/Terminal Style UI) */}
-          <div className="section-card glass-panel p-0 overflow-hidden" style={{ border: '1px solid rgba(139, 92, 246, 0.25)' }}>
+          <div className="card" style={{ padding: 0, overflow: 'hidden', borderColor: 'rgba(139, 92, 246, 0.25)', transform: 'none' }}>
             {/* Terminal Header */}
             <div className="flex-between px-4 py-3" style={{ background: 'linear-gradient(90deg, rgba(139, 92, 246, 0.08) 0%, rgba(59, 130, 246, 0.04) 100%)', borderBottom: '1px solid rgba(139, 92, 246, 0.15)' }}>
               <div className="flex-align gap-2">
@@ -656,17 +757,8 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
 
             <div className="p-4 flex-column gap-3" style={{ background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.03) 0%, transparent 100%)' }}>
               {aiAnalysis ? (
-                <div className="ai-chat-bubble p-3 glass-panel animate-fadeIn" style={{ maxHeight: '340px', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.04)' }}>
-                  <pre style={{ 
-                    fontFamily: 'var(--font-sans)', 
-                    whiteSpace: 'pre-wrap', 
-                    fontSize: '0.875rem', 
-                    lineHeight: 1.55,
-                    color: 'var(--text-primary)',
-                    margin: 0
-                  }}>
-                    {aiAnalysis}
-                  </pre>
+                <div className="ai-chat-bubble p-4 glass-panel animate-fadeIn" style={{ maxHeight: '380px', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.04)', borderRadius: '18px', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                  {renderFormattedAdvice(aiAnalysis)}
                 </div>
               ) : (
                 <div className="empty-box p-4 text-center">
@@ -675,6 +767,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                   <p className="text-muted text-xs mt-1">Suki bakal scan data pengeluaran lo pada periode ini dan kasih insight budget gokil!</p>
                   <button 
                     className="btn btn-primary btn-sm mt-3"
+                    style={{ borderRadius: '12px', padding: '0.5rem 1.25rem' }}
                     onClick={handleRequestAiAdvice}
                     disabled={loadingAi}
                   >
@@ -686,8 +779,8 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
           </div>
 
           {/* Top 5 Single Expenses Leaderboard (Analisis Top Pengeluaran) */}
-          <div className="section-card glass-panel p-4">
-            <h3 className="section-title mb-3 flex-align gap-2">
+          <div className="card" style={{ transform: 'none' }}>
+            <h3 className="section-title mb-3 flex-align gap-2" style={{ fontSize: '1.1rem' }}>
               <SlidersHorizontal size={18} className="icon-accent" /> Top Pengeluaran Terbesar
             </h3>
             {topSingleExpenses.length === 0 ? (
@@ -701,21 +794,22 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                   return (
                     <div 
                       key={entry.id} 
-                      className="flex-between p-3 glass-panel"
+                      className="flex-between p-3"
                       style={{ 
                         background: 'rgba(255, 255, 255, 0.01)', 
                         border: '1px solid rgba(255, 255, 255, 0.03)',
-                        transition: 'transform 0.2s ease'
+                        borderRadius: '16px',
+                        transition: 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.transform = 'translateX(3px)'}
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'translateX(4px)'}
                       onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
                     >
                       <div className="flex-align gap-3">
                         <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-secondary)', width: '15px' }}>{idx + 1}.</span>
                         <div 
                           style={{ 
-                            width: '30px', 
-                            height: '30px', 
+                            width: '32px', 
+                            height: '32px', 
                             borderRadius: '8px', 
                             display: 'flex', 
                             alignItems: 'center', 
@@ -727,7 +821,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                           {styleMeta.icon}
                         </div>
                         <div className="flex-column">
-                          <span className="font-semibold text-sm">{entry.description}</span>
+                          <span className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{entry.description}</span>
                           <span className="text-xs text-muted">{entry.category} • {entry.date}</span>
                         </div>
                       </div>
@@ -742,8 +836,8 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
           </div>
           
           {/* Riwayat Transaksi */}
-          <div className="section-card glass-panel p-4 flex-column gap-2" style={{ flex: 1 }}>
-            <h3 className="section-title">Riwayat Transaksi</h3>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', transform: 'none' }}>
+            <h3 className="section-title" style={{ fontSize: '1.1rem' }}>Riwayat Transaksi</h3>
 
             <div className="toolbar-panel" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: 0, background: 'none', border: 'none' }}>
               {/* Pencarian */}
@@ -763,7 +857,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                   value={filterType} 
                   onChange={(e) => setFilterType(e.target.value)}
                   className="text-xs"
-                  style={{ padding: '0.4rem 0.75rem', borderRadius: '10px' }}
+                  style={{ padding: '0.4rem 0.75rem', borderRadius: '10px', backgroundColor: 'rgba(0, 0, 0, 0.2)', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-primary)' }}
                 >
                   <option value="all">Semua Tipe</option>
                   <option value="income">📈 Pemasukan</option>
@@ -774,7 +868,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                   value={filterCategory} 
                   onChange={(e) => setFilterCategory(e.target.value)}
                   className="text-xs"
-                  style={{ padding: '0.4rem 0.75rem', borderRadius: '10px' }}
+                  style={{ padding: '0.4rem 0.75rem', borderRadius: '10px', backgroundColor: 'rgba(0, 0, 0, 0.2)', border: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-primary)' }}
                 >
                   <option value="all">Semua Kategori</option>
                   {[...new Set(financialEntries.map(e => e.category))].map(cat => (
@@ -792,13 +886,23 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
                 </div>
               ) : (
                 filteredEntries.map(entry => (
-                  <div key={entry.id} className="transaction-list-item flex-between p-3 glass-panel">
+                  <div 
+                    key={entry.id} 
+                    className="transaction-list-item flex-between p-3"
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.01)',
+                      border: '1px solid rgba(255, 255, 255, 0.03)',
+                      borderRadius: '16px',
+                      padding: '0.85rem 1.25rem',
+                      transition: 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1), border-color 0.2s ease',
+                    }}
+                  >
                     <div className="flex-align gap-2">
                       <div className={`transaction-icon-indicator ${entry.type === 'income' ? 'icon-emerald' : 'icon-destructive'}`} style={{ width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {entry.type === 'income' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
                       </div>
                       <div className="flex-column">
-                        <span className="transaction-item-title font-semibold text-sm">{entry.description}</span>
+                        <span className="transaction-item-title font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>{entry.description}</span>
                         <span className="transaction-item-meta text-xs text-muted flex-align gap-1">
                           <span>{entry.category}</span> • <Calendar size={10} /> <span>{entry.date}</span>
                         </span>
@@ -841,37 +945,14 @@ Tolong berikan ulasan ringkas neraca keuangan saya, identifikasi kategori pengel
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-        .transaction-list-item {
-          transition: transform 0.2s ease, border-color 0.2s ease;
-        }
         .transaction-list-item:hover {
-          transform: translateX(2px);
-          border-color: var(--border-highlight);
+          transform: translateX(4px) !important;
+          border-color: rgba(99, 102, 241, 0.25) !important;
         }
         .text-gradient {
           background: linear-gradient(135deg, #ffffff 40%, #a855f7 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
-        }
-        .period-filter-pill {
-          padding: 0.4rem 0.85rem;
-          border-radius: 20px;
-          border: 1px solid var(--border-color);
-          background: rgba(255, 255, 255, 0.02);
-          color: var(--text-secondary);
-          font-size: 0.8rem;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        .period-filter-pill:hover {
-          border-color: var(--primary-light);
-          color: var(--text-primary);
-        }
-        .period-filter-pill.active {
-          background: var(--primary-light);
-          color: var(--primary);
-          border-color: var(--primary);
         }
         .animate-fadeIn {
           animation: fadeIn 0.3s ease-out;
