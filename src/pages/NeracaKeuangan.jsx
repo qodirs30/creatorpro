@@ -819,7 +819,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
   });
 
   return (
-    <div className="page-container" style={{ maxWidth: '1400px', margin: '0 auto', height: '100%' }}>
+    <div className="page-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
       {/* Header */}
       <div className="page-header flex-between flex-wrap gap-2" style={{ marginBottom: '1.5rem' }}>
         <div>
@@ -2272,7 +2272,6 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
       <style>{`
         .page-container {
           padding: 2rem 1.5rem;
-          overflow-y: auto;
           overflow-x: hidden;
           width: 100%;
         }

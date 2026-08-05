@@ -421,7 +421,7 @@ input, textarea, select {
 .mobile-menu-toggle {
   display: none;
   position: fixed;
-  top: 1rem;
+  top: calc(1rem + env(safe-area-inset-top, 0px));
   left: 1rem;
   z-index: 101;
   background: var(--primary);
@@ -482,7 +482,7 @@ input, textarea, select {
 
   .main-content {
     width: 100%;
-    padding: 4.5rem 1rem 1.5rem 1rem;
+    padding: calc(4.5rem + env(safe-area-inset-top, 0px)) 1rem calc(1.5rem + env(safe-area-inset-bottom, 0px)) 1rem;
   }
 
   .card {
@@ -497,7 +497,7 @@ input, textarea, select {
 
 @media (max-width: 480px) {
   .main-content {
-    padding: 4.5rem 0.75rem 1rem 0.75rem;
+    padding: calc(4.5rem + env(safe-area-inset-top, 0px)) 0.75rem calc(1rem + env(safe-area-inset-bottom, 0px)) 0.75rem;
   }
 
   .card {
