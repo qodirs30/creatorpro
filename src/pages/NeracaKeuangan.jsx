@@ -819,37 +819,31 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
   });
 
   return (
-    <div className="page-container light-mode-container" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '6rem' }}>
-      {/* Apple Health Style Top Header */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-          <button 
-            style={{ 
-              width: '36px', 
-              height: '36px', 
-              borderRadius: '50%', 
-              backgroundColor: '#ffffff', 
-              border: '1px solid rgba(0,0,0,0.08)', 
-              boxShadow: '0 2px 8px rgba(0,0,0,0.06)', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              color: '#000000',
-              cursor: 'pointer' 
-            }}
-            onClick={() => window.history.back()}
-            title="Kembali"
-          >
-            <ChevronLeft size={20} />
-          </button>
+    <div className="page-container obsidian-container" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '6rem' }}>
+      {/* High-End Agency Top Header */}
+      <div style={{ marginBottom: '1.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+            <span style={{ width: '38px', height: '38px', borderRadius: '12px', background: 'rgba(99, 102, 241, 0.15)', color: '#6366f1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Wallet size={22} />
+            </span>
+            <h1 style={{ fontSize: '2.1rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.025em', margin: 0 }}>
+              Neraca Keuangan Studio
+            </h1>
+          </div>
+          <p style={{ color: '#94a3b8', fontSize: '0.88rem', margin: 0 }}>
+            Ringkasan real-time arus kas, anggaran bulanan, tagihan, dan analisis AI Suki.
+          </p>
         </div>
 
-        <h1 style={{ fontSize: '2.25rem', fontWeight: 800, color: '#000000', letterSpacing: '-0.03em', margin: 0 }}>
-          Semua Data
-        </h1>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#000000', marginTop: '0.75rem', marginBottom: 0 }}>
-          Hari Ini
-        </h2>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button 
+            style={{ padding: '0.55rem 1.1rem', borderRadius: '999px', background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', color: '#818cf8', fontSize: '0.82rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.45rem', cursor: 'pointer' }}
+            onClick={() => setActiveTab('dasbor')}
+          >
+            <Sparkles size={16} /> Suki AI Advisor
+          </button>
+        </div>
       </div>
 
       {/* ========================================================================================= */}
@@ -857,165 +851,163 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
       {/* ========================================================================================= */}
       {activeTab === 'dasbor' && (
         <div className="tab-pane animate-fadeIn">
-          {/* Sleek Period Filter Bar */}
-          <div className="card" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', transform: 'none' }}>
-            <div className="flex-between flex-wrap gap-3">
-              <div className="flex-align gap-2 flex-wrap">
-                <CalendarDays size={16} className="text-secondary" />
-                <span className="text-xs font-bold text-secondary mr-2 text-uppercase tracking-wider" style={{ marginRight: '0.75rem' }}>Filter Periode:</span>
-                {[
-                  { id: 'all', label: 'Semua Waktu' },
-                  { id: 'this-month', label: 'Bulan Ini' },
-                  { id: 'last-month', label: 'Bulan Lalu' },
-                  { id: 'this-year', label: 'Tahun Ini' },
-                  { id: 'custom', label: 'Kustom Tanggal' },
-                ].map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => setFilterPeriod(p.id)}
-                    style={getPillStyle(filterPeriod === p.id)}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-
-              {filterPeriod === 'custom' && (
-                <div className="flex-align gap-2 animate-fadeIn">
-                  <input
-                    type="date"
-                    className="input-field py-1 px-2 text-xs"
-                    style={{ width: '130px', height: '32px' }}
-                    value={customStartDate}
-                    onChange={(e) => setCustomStartDate(e.target.value)}
-                  />
-                  <span className="text-xs text-muted">s/d</span>
-                  <input
-                    type="date"
-                    className="input-field py-1 px-2 text-xs"
-                    style={{ width: '130px', height: '32px' }}
-                    value={customEndDate}
-                    onChange={(e) => setCustomEndDate(e.target.value)}
-                  />
-                </div>
-              )}
+          {/* Clean Period Filter Bar */}
+          <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+            <div className="flex-align gap-2 flex-wrap">
+              <CalendarDays size={16} style={{ color: '#6366f1' }} />
+              <span className="text-xs font-bold text-uppercase tracking-wider" style={{ color: '#94a3b8', marginRight: '0.75rem' }}>Filter Periode:</span>
+              {[
+                { id: 'all', label: 'Semua Waktu' },
+                { id: 'this-month', label: 'Bulan Ini' },
+                { id: 'last-month', label: 'Bulan Lalu' },
+                { id: 'this-year', label: 'Tahun Ini' },
+                { id: 'custom', label: 'Kustom Tanggal' },
+              ].map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setFilterPeriod(p.id)}
+                  style={getPillStyle(filterPeriod === p.id)}
+                >
+                  {p.label}
+                </button>
+              ))}
             </div>
+
+            {filterPeriod === 'custom' && (
+              <div className="flex-align gap-2 animate-fadeIn">
+                <input
+                  type="date"
+                  className="input-field py-1 px-2 text-xs"
+                  style={{ width: '130px', height: '32px' }}
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                />
+                <span className="text-xs text-muted">s/d</span>
+                <input
+                  type="date"
+                  className="input-field py-1 px-2 text-xs"
+                  style={{ width: '130px', height: '32px' }}
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Bento Grid Summary Cards - Apple Health Style */}
+          {/* Bento Grid Summary Cards - Obsidian Glass Style */}
           <div className="neraca-grid mb-4">
             {/* Card 1: Net Worth */}
-            <div className="card apple-health-card" style={{ padding: '1.25rem' }}>
+            <div className="card obsidian-card" style={{ padding: '1.25rem' }}>
               <div className="flex-between flex-align mb-2">
                 <div className="flex-align gap-2">
-                  <span style={{ color: '#ff9500', fontSize: '1.1rem' }}>🔥</span>
-                  <span style={{ color: '#ff9500', fontWeight: 700, fontSize: '0.95rem' }}>Saldo Bersih (Net Worth)</span>
+                  <span style={{ color: '#a3e635', fontSize: '1.1rem' }}>🔥</span>
+                  <span style={{ color: '#a3e635', fontWeight: 700, fontSize: '0.95rem' }}>Saldo Bersih (Net Worth)</span>
                 </div>
-                <div className="flex-align gap-1 text-xs" style={{ color: '#8e8e93', fontWeight: 500 }}>
+                <div className="flex-align gap-1 text-xs" style={{ color: '#94a3b8', fontWeight: 500 }}>
                   <span>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                   <ChevronRight size={14} />
                 </div>
               </div>
               <div className="flex-between flex-align mt-2">
                 <div>
-                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', letterSpacing: '-0.02em' }}>
+                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
                     Rp {summary.balance.toLocaleString('id-ID')}
                   </span>
                 </div>
-                <div className="apple-health-bar-group">
-                  <div className="apple-health-bar" style={{ height: '35%' }} />
-                  <div className="apple-health-bar" style={{ height: '55%' }} />
-                  <div className="apple-health-bar" style={{ height: '30%' }} />
-                  <div className="apple-health-bar" style={{ height: '70%' }} />
-                  <div className="apple-health-bar" style={{ height: '45%' }} />
-                  <div className="apple-health-bar active" style={{ height: '90%' }} />
+                <div className="obsidian-bar-group">
+                  <div className="obsidian-bar" style={{ height: '35%' }} />
+                  <div className="obsidian-bar" style={{ height: '55%' }} />
+                  <div className="obsidian-bar" style={{ height: '30%' }} />
+                  <div className="obsidian-bar" style={{ height: '70%' }} />
+                  <div className="obsidian-bar" style={{ height: '45%' }} />
+                  <div className="obsidian-bar active-orange" style={{ height: '90%' }} />
                 </div>
               </div>
             </div>
 
             {/* Card 2: Total Pendapatan */}
-            <div className="card apple-health-card" style={{ padding: '1.25rem' }}>
+            <div className="card obsidian-card" style={{ padding: '1.25rem' }}>
               <div className="flex-between flex-align mb-2">
                 <div className="flex-align gap-2">
-                  <span style={{ color: '#34c759', fontSize: '1.1rem' }}>🔥</span>
-                  <span style={{ color: '#34c759', fontWeight: 700, fontSize: '0.95rem' }}>Total Pendapatan</span>
+                  <span style={{ color: '#10b981', fontSize: '1.1rem' }}>🔥</span>
+                  <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.95rem' }}>Total Pendapatan</span>
                 </div>
-                <div className="flex-align gap-1 text-xs" style={{ color: '#8e8e93', fontWeight: 500 }}>
+                <div className="flex-align gap-1 text-xs" style={{ color: '#94a3b8', fontWeight: 500 }}>
                   <span>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                   <ChevronRight size={14} />
                 </div>
               </div>
               <div className="flex-between flex-align mt-2">
                 <div>
-                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', letterSpacing: '-0.02em' }}>
+                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
                     Rp {summary.income.toLocaleString('id-ID')}
                   </span>
                 </div>
-                <div className="apple-health-bar-group">
-                  <div className="apple-health-bar" style={{ height: '40%' }} />
-                  <div className="apple-health-bar" style={{ height: '60%' }} />
-                  <div className="apple-health-bar" style={{ height: '50%' }} />
-                  <div className="apple-health-bar" style={{ height: '75%' }} />
-                  <div className="apple-health-bar" style={{ height: '65%' }} />
-                  <div className="apple-health-bar active-green" style={{ height: '95%' }} />
+                <div className="obsidian-bar-group">
+                  <div className="obsidian-bar" style={{ height: '40%' }} />
+                  <div className="obsidian-bar" style={{ height: '60%' }} />
+                  <div className="obsidian-bar" style={{ height: '50%' }} />
+                  <div className="obsidian-bar" style={{ height: '75%' }} />
+                  <div className="obsidian-bar" style={{ height: '65%' }} />
+                  <div className="obsidian-bar active-emerald" style={{ height: '95%' }} />
                 </div>
               </div>
             </div>
 
             {/* Card 3: Total Pengeluaran */}
-            <div className="card apple-health-card" style={{ padding: '1.25rem' }}>
+            <div className="card obsidian-card" style={{ padding: '1.25rem' }}>
               <div className="flex-between flex-align mb-2">
                 <div className="flex-align gap-2">
-                  <span style={{ color: '#ff3b30', fontSize: '1.1rem' }}>🔥</span>
-                  <span style={{ color: '#ff3b30', fontWeight: 700, fontSize: '0.95rem' }}>Total Pengeluaran</span>
+                  <span style={{ color: '#f43f5e', fontSize: '1.1rem' }}>🔥</span>
+                  <span style={{ color: '#f43f5e', fontWeight: 700, fontSize: '0.95rem' }}>Total Pengeluaran</span>
                 </div>
-                <div className="flex-align gap-1 text-xs" style={{ color: '#8e8e93', fontWeight: 500 }}>
+                <div className="flex-align gap-1 text-xs" style={{ color: '#94a3b8', fontWeight: 500 }}>
                   <span>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                   <ChevronRight size={14} />
                 </div>
               </div>
               <div className="flex-between flex-align mt-2">
                 <div>
-                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', letterSpacing: '-0.02em' }}>
+                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
                     Rp {summary.expense.toLocaleString('id-ID')}
                   </span>
                 </div>
-                <div className="apple-health-bar-group">
-                  <div className="apple-health-bar" style={{ height: '50%' }} />
-                  <div className="apple-health-bar" style={{ height: '40%' }} />
-                  <div className="apple-health-bar" style={{ height: '65%' }} />
-                  <div className="apple-health-bar" style={{ height: '35%' }} />
-                  <div className="apple-health-bar" style={{ height: '55%' }} />
-                  <div className="apple-health-bar" style={{ height: '80%', backgroundColor: '#ff3b30' }} />
+                <div className="obsidian-bar-group">
+                  <div className="obsidian-bar" style={{ height: '50%' }} />
+                  <div className="obsidian-bar" style={{ height: '40%' }} />
+                  <div className="obsidian-bar" style={{ height: '65%' }} />
+                  <div className="obsidian-bar" style={{ height: '35%' }} />
+                  <div className="obsidian-bar" style={{ height: '55%' }} />
+                  <div className="obsidian-bar active-danger" style={{ height: '80%' }} />
                 </div>
               </div>
             </div>
 
             {/* Card 4: Rasio Menabung */}
-            <div className="card apple-health-card" style={{ padding: '1.25rem' }}>
+            <div className="card obsidian-card" style={{ padding: '1.25rem' }}>
               <div className="flex-between flex-align mb-2">
                 <div className="flex-align gap-2">
-                  <span style={{ color: '#007aff', fontSize: '1.1rem' }}>🔥</span>
-                  <span style={{ color: '#007aff', fontWeight: 700, fontSize: '0.95rem' }}>Rasio Menabung</span>
+                  <span style={{ color: '#6366f1', fontSize: '1.1rem' }}>🔥</span>
+                  <span style={{ color: '#818cf8', fontWeight: 700, fontSize: '0.95rem' }}>Rasio Menabung</span>
                 </div>
-                <div className="flex-align gap-1 text-xs" style={{ color: '#8e8e93', fontWeight: 500 }}>
+                <div className="flex-align gap-1 text-xs" style={{ color: '#94a3b8', fontWeight: 500 }}>
                   <span>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                   <ChevronRight size={14} />
                 </div>
               </div>
               <div className="flex-between flex-align mt-2">
                 <div>
-                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', letterSpacing: '-0.02em' }}>
+                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
                     {summary.savingsRate}%
                   </span>
                 </div>
-                <div className="apple-health-bar-group">
-                  <div className="apple-health-bar" style={{ height: '30%' }} />
-                  <div className="apple-health-bar" style={{ height: '45%' }} />
-                  <div className="apple-health-bar" style={{ height: '60%' }} />
-                  <div className="apple-health-bar" style={{ height: '50%' }} />
-                  <div className="apple-health-bar" style={{ height: '70%' }} />
-                  <div className="apple-health-bar active-blue" style={{ height: '85%' }} />
+                <div className="obsidian-bar-group">
+                  <div className="obsidian-bar" style={{ height: '30%' }} />
+                  <div className="obsidian-bar" style={{ height: '45%' }} />
+                  <div className="obsidian-bar" style={{ height: '60%' }} />
+                  <div className="obsidian-bar" style={{ height: '50%' }} />
+                  <div className="obsidian-bar" style={{ height: '70%' }} />
+                  <div className="obsidian-bar active-indigo" style={{ height: '85%' }} />
                 </div>
               </div>
             </div>
@@ -2339,52 +2331,52 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
         </div>
       )}
 
-      {/* iOS Floating Bottom Dock Navigation (Apple Health Light Style) */}
-      <div className="apple-dock-wrapper">
-        <div className="apple-dock-container">
+      {/* Floating Obsidian Glass Dock Navigation */}
+      <div className="obsidian-dock-wrapper">
+        <div className="obsidian-dock-container">
           <button 
-            className={`apple-dock-item ${activeTab === 'dasbor' ? 'active' : ''}`}
+            className={`obsidian-dock-item ${activeTab === 'dasbor' ? 'active' : ''}`}
             onClick={() => setActiveTab('dasbor')}
           >
-            <LayoutDashboard size={20} className="apple-dock-icon" />
+            <LayoutDashboard size={20} className="obsidian-dock-icon" />
             <span>Rangkuman</span>
           </button>
 
           <button 
-            className={`apple-dock-item ${activeTab === 'anggaran' ? 'active' : ''}`}
+            className={`obsidian-dock-item ${activeTab === 'anggaran' ? 'active' : ''}`}
             onClick={() => setActiveTab('anggaran')}
           >
-            <PiggyBank size={20} className="apple-dock-icon" />
+            <PiggyBank size={20} className="obsidian-dock-icon" />
             <span>Anggaran</span>
           </button>
 
           <button 
-            className={`apple-dock-item ${activeTab === 'tagihan' ? 'active' : ''}`}
+            className={`obsidian-dock-item ${activeTab === 'tagihan' ? 'active' : ''}`}
             onClick={() => setActiveTab('tagihan')}
           >
-            <CalendarDays size={20} className="apple-dock-icon" />
+            <CalendarDays size={20} className="obsidian-dock-icon" />
             <span>Tagihan</span>
           </button>
 
           <button 
-            className={`apple-dock-item ${activeTab === 'akun' ? 'active' : ''}`}
+            className={`obsidian-dock-item ${activeTab === 'akun' ? 'active' : ''}`}
             onClick={() => setActiveTab('akun')}
           >
-            <Wallet size={20} className="apple-dock-icon" />
+            <Wallet size={20} className="obsidian-dock-icon" />
             <span>Akun</span>
           </button>
 
           <button 
-            className={`apple-dock-item ${activeTab === 'data' ? 'active' : ''}`}
+            className={`obsidian-dock-item ${activeTab === 'data' ? 'active' : ''}`}
             onClick={() => setActiveTab('data')}
           >
-            <SlidersHorizontal size={20} className="apple-dock-icon" />
+            <SlidersHorizontal size={20} className="obsidian-dock-icon" />
             <span>Data</span>
           </button>
         </div>
 
         <button 
-          className="apple-dock-action-btn" 
+          className="obsidian-dock-action-btn" 
           title="Catat / Cari Transaksi"
           onClick={() => setActiveTab('dasbor')}
         >

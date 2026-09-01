@@ -1863,67 +1863,77 @@ input, textarea, select {
 }
 
 /* ==========================================================================
-   APPLE HEALTH (LIGHT MODE) UI TOKENS & FLOATING BOTTOM DOCK
+   HIGH-END OBSIDIAN GLASS DESIGN SYSTEM (NERACA STUDIO)
    ========================================================================== */
-.apple-health-card {
-  background-color: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
-  border-radius: 22px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
-  color: #000000 !important;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+.obsidian-container {
+  background-color: #030307 !important;
+  color: #f8fafc !important;
+  min-height: 100vh;
+  padding-bottom: 6.5rem;
 }
 
-.apple-health-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06) !important;
+.obsidian-card {
+  background: rgba(13, 17, 28, 0.85) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6) !important;
+  color: #f8fafc !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, box-shadow 0.25s ease;
 }
 
-.apple-health-header-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 0.9rem;
+.obsidian-card:hover {
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 20px rgba(99, 102, 241, 0.1) !important;
 }
 
-/* Apple Health Right-Side Mini Bar Visual */
-.apple-health-bar-group {
+.obsidian-title {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+}
+
+.obsidian-subtitle {
+  color: #94a3b8 !important;
+}
+
+.obsidian-bar-group {
   display: flex;
   align-items: flex-end;
   gap: 3.5px;
-  height: 48px;
-  width: 54px;
+  height: 44px;
+  width: 50px;
 }
 
-.apple-health-bar {
+.obsidian-bar {
   flex: 1;
-  background-color: #e5e5ea;
+  background-color: rgba(255, 255, 255, 0.1);
   border-radius: 3px 3px 0 0;
   transition: height 0.3s ease, background-color 0.3s ease;
 }
 
-.apple-health-bar.active {
+.obsidian-bar.active-orange {
   background-color: #ff9500;
+  box-shadow: 0 0 10px rgba(255, 149, 0, 0.5);
 }
 
-.apple-health-bar.active-green {
-  background-color: #34c759;
+.obsidian-bar.active-emerald {
+  background-color: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
 }
 
-.apple-health-bar.active-blue {
-  background-color: #007aff;
+.obsidian-bar.active-danger {
+  background-color: #f43f5e;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.5);
 }
 
-.apple-health-bar.active-purple {
-  background-color: #af52de;
+.obsidian-bar.active-indigo {
+  background-color: #6366f1;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
 }
 
-/* iOS Floating Light Glass Dock Bar */
-.apple-dock-wrapper {
+/* Floating Obsidian Glass Dock Bar */
+.obsidian-dock-wrapper {
   position: fixed;
   bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
   left: 50%;
@@ -1934,128 +1944,64 @@ input, textarea, select {
   gap: 0.75rem;
 }
 
-.apple-dock-container {
+.obsidian-dock-container {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(13, 17, 28, 0.92);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 40px;
   padding: 0.35rem 0.5rem;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-.apple-dock-item {
+.obsidian-dock-item {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 0.4rem 0.85rem;
+  padding: 0.45rem 0.9rem;
   border-radius: 28px;
   border: none;
   background: transparent;
-  color: #8e8e93;
+  color: #64748b;
   font-size: 0.65rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.apple-dock-item.active {
-  background: #e5e5ea;
-  color: #007aff;
+.obsidian-dock-item.active {
+  background: rgba(99, 102, 241, 0.18);
+  color: #818cf8;
 }
 
-.apple-dock-item.active .apple-dock-icon {
-  color: #007aff;
+.obsidian-dock-item.active .obsidian-dock-icon {
+  color: #818cf8;
   transform: scale(1.1);
 }
 
-.apple-dock-icon {
-  transition: transform 0.2s ease;
-}
-
-/* Right-side floating action button on dock */
-.apple-dock-action-btn {
+.obsidian-dock-action-btn {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #000000;
+  color: #ffffff;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 
-.apple-dock-action-btn:active {
+.obsidian-dock-action-btn:active {
   transform: scale(0.92);
 }
 
-/* ==========================================================================
-   LIGHT MODE OVERRIDES FOR NERACA KEUANGAN & GLOBAL SURFACES
-   ========================================================================== */
-.light-mode-container {
-  background-color: #f2f2f7 !important;
-  color: #000000 !important;
-  min-height: 100vh;
-  padding-bottom: 6.5rem;
-}
-
-.light-mode-container .card {
-  background-color: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  border-radius: 20px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
-  color: #000000 !important;
-}
-
-.light-mode-container .text-primary,
-.light-mode-container h1, 
-.light-mode-container h2, 
-.light-mode-container h3, 
-.light-mode-container h4, 
-.light-mode-container h5, 
-.light-mode-container h6 {
-  color: #000000 !important;
-}
-
-.light-mode-container .text-secondary,
-.light-mode-container .text-muted {
-  color: #6c6c70 !important;
-}
-
-.light-mode-container .input-field,
-.light-mode-container select,
-.light-mode-container textarea {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  border: 1px solid #e5e5ea !important;
-  box-shadow: none !important;
-}
-
-.light-mode-container .input-field:focus,
-.light-mode-container select:focus,
-.light-mode-container textarea:focus {
-  border-color: #007aff !important;
-  outline: none !important;
-}
-
-.light-mode-container .table-responsive th {
-  background-color: #f8f9fa !important;
-  color: #1c1c1e !important;
-  border-bottom: 2px solid #e5e5ea !important;
-}
-
-.light-mode-container .table-responsive td {
-  color: #1c1c1e !important;
-  border-bottom: 1px solid #f2f2f7 !important;
-}
 
 
 
