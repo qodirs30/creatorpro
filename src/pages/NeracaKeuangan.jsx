@@ -820,45 +820,36 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
 
   return (
     <div className="page-container" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '6rem' }}>
-      {/* Apple Fitness Style Top Header */}
-      <div className="page-header flex-between flex-wrap gap-2" style={{ marginBottom: '1.25rem' }}>
-        <div>
-          <h1 className="page-title flex-align gap-2" style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.025em' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'rgba(163, 230, 53, 0.15)', color: '#a3e635' }}>
-              <Wallet size={20} />
-            </span> 
-            Neraca Studio
-          </h1>
-          <p className="page-subtitle" style={{ color: '#8e8e93', fontSize: '0.85rem' }}>Kelola kas, anggaran, tagihan, dan analisis AI Suki.</p>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      {/* Apple Health Style Top Header */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
           <button 
-            style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#2c2c2e', border: 'none', color: '#a3e635', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} 
-            title="Suki AI Advisor" 
-            onClick={() => setActiveTab('dasbor')}
+            style={{ 
+              width: '36px', 
+              height: '36px', 
+              borderRadius: '50%', 
+              backgroundColor: '#ffffff', 
+              border: '1px solid rgba(0,0,0,0.08)', 
+              boxShadow: '0 2px 8px rgba(0,0,0,0.06)', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              color: '#000000',
+              cursor: 'pointer' 
+            }}
+            onClick={() => window.history.back()}
+            title="Kembali"
           >
-            <Sparkles size={18} />
+            <ChevronLeft size={20} />
           </button>
         </div>
-      </div>
 
-      {/* Tabs Navigation Segmented Control */}
-      <div className="card apple-card" style={{ padding: '0.5rem', marginBottom: '1.5rem', transform: 'none', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <button style={getTabStyle('dasbor')} onClick={() => setActiveTab('dasbor')}>
-          <LayoutDashboard size={16} /> Dasbor Utama
-        </button>
-        <button style={getTabStyle('anggaran')} onClick={() => setActiveTab('anggaran')}>
-          <PiggyBank size={16} /> Anggaran & Target
-        </button>
-        <button style={getTabStyle('tagihan')} onClick={() => setActiveTab('tagihan')}>
-          <CalendarDays size={16} /> Tagihan & Utang
-        </button>
-        <button style={getTabStyle('akun')} onClick={() => setActiveTab('akun')}>
-          <Wallet size={16} /> Akun & Aset
-        </button>
-        <button style={getTabStyle('data')} onClick={() => setActiveTab('data')}>
-          <SlidersHorizontal size={16} /> Data & Impor
-        </button>
+        <h1 style={{ fontSize: '2.25rem', fontWeight: 800, color: '#000000', letterSpacing: '-0.03em', margin: 0 }}>
+          Semua Data
+        </h1>
+        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#000000', marginTop: '0.75rem', marginBottom: 0 }}>
+          Hari Ini
+        </h2>
       </div>
 
       {/* ========================================================================================= */}
@@ -911,53 +902,121 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
             </div>
           </div>
 
-          {/* Bento Grid Summary Cards */}
-          <div className="neraca-grid">
-            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', minHeight: '90px' }}>
-              <div className="neraca-card-icon icon-purple">
-                <Wallet size={22} />
+          {/* Bento Grid Summary Cards - Apple Health Style */}
+          <div className="neraca-grid mb-4">
+            {/* Card 1: Net Worth */}
+            <div className="card apple-health-card" style={{ padding: '1.25rem' }}>
+              <div className="flex-between flex-align mb-2">
+                <div className="flex-align gap-2">
+                  <span style={{ color: '#ff9500', fontSize: '1.1rem' }}>🔥</span>
+                  <span style={{ color: '#ff9500', fontWeight: 700, fontSize: '0.95rem' }}>Saldo Bersih (Net Worth)</span>
+                </div>
+                <div className="flex-align gap-1 text-xs" style={{ color: '#8e8e93', fontWeight: 500 }}>
+                  <span>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <ChevronRight size={14} />
+                </div>
               </div>
-              <div className="neraca-card-info">
-                <span className="neraca-lbl">Saldo Bersih (Net Worth)</span>
-                <span className="neraca-val text-gradient">
-                  Rp {summary.balance.toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', minHeight: '90px' }}>
-              <div className="neraca-card-icon icon-emerald">
-                <ArrowUpRight size={22} />
-              </div>
-              <div className="neraca-card-info">
-                <span className="neraca-lbl">Total Pendapatan</span>
-                <span className="neraca-val text-emerald" style={{ color: 'var(--success)' }}>
-                  Rp {summary.income.toLocaleString()}
-                </span>
-              </div>
-            </div>
-
-            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', minHeight: '90px' }}>
-              <div className="neraca-card-icon icon-destructive">
-                <ArrowDownRight size={22} />
-              </div>
-              <div className="neraca-card-info">
-                <span className="neraca-lbl">Total Pengeluaran</span>
-                <span className="neraca-val text-danger" style={{ color: 'var(--danger)' }}>
-                  Rp {summary.expense.toLocaleString()}
-                </span>
+              <div className="flex-between flex-align mt-2">
+                <div>
+                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', letterSpacing: '-0.02em' }}>
+                    Rp {summary.balance.toLocaleString('id-ID')}
+                  </span>
+                </div>
+                <div className="apple-health-bar-group">
+                  <div className="apple-health-bar" style={{ height: '35%' }} />
+                  <div className="apple-health-bar" style={{ height: '55%' }} />
+                  <div className="apple-health-bar" style={{ height: '30%' }} />
+                  <div className="apple-health-bar" style={{ height: '70%' }} />
+                  <div className="apple-health-bar" style={{ height: '45%' }} />
+                  <div className="apple-health-bar active" style={{ height: '90%' }} />
+                </div>
               </div>
             </div>
 
-            <div className="card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem', minHeight: '90px' }}>
-              <div className="neraca-card-icon icon-blue">
-                <PiggyBank size={22} />
+            {/* Card 2: Total Pendapatan */}
+            <div className="card apple-health-card" style={{ padding: '1.25rem' }}>
+              <div className="flex-between flex-align mb-2">
+                <div className="flex-align gap-2">
+                  <span style={{ color: '#34c759', fontSize: '1.1rem' }}>🔥</span>
+                  <span style={{ color: '#34c759', fontWeight: 700, fontSize: '0.95rem' }}>Total Pendapatan</span>
+                </div>
+                <div className="flex-align gap-1 text-xs" style={{ color: '#8e8e93', fontWeight: 500 }}>
+                  <span>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <ChevronRight size={14} />
+                </div>
               </div>
-              <div className="neraca-card-info">
-                <span className="neraca-lbl">Rasio Menabung</span>
-                <span className="neraca-val text-blue">
-                  {summary.savingsRate}%
-                </span>
+              <div className="flex-between flex-align mt-2">
+                <div>
+                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', letterSpacing: '-0.02em' }}>
+                    Rp {summary.income.toLocaleString('id-ID')}
+                  </span>
+                </div>
+                <div className="apple-health-bar-group">
+                  <div className="apple-health-bar" style={{ height: '40%' }} />
+                  <div className="apple-health-bar" style={{ height: '60%' }} />
+                  <div className="apple-health-bar" style={{ height: '50%' }} />
+                  <div className="apple-health-bar" style={{ height: '75%' }} />
+                  <div className="apple-health-bar" style={{ height: '65%' }} />
+                  <div className="apple-health-bar active-green" style={{ height: '95%' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: Total Pengeluaran */}
+            <div className="card apple-health-card" style={{ padding: '1.25rem' }}>
+              <div className="flex-between flex-align mb-2">
+                <div className="flex-align gap-2">
+                  <span style={{ color: '#ff3b30', fontSize: '1.1rem' }}>🔥</span>
+                  <span style={{ color: '#ff3b30', fontWeight: 700, fontSize: '0.95rem' }}>Total Pengeluaran</span>
+                </div>
+                <div className="flex-align gap-1 text-xs" style={{ color: '#8e8e93', fontWeight: 500 }}>
+                  <span>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <ChevronRight size={14} />
+                </div>
+              </div>
+              <div className="flex-between flex-align mt-2">
+                <div>
+                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', letterSpacing: '-0.02em' }}>
+                    Rp {summary.expense.toLocaleString('id-ID')}
+                  </span>
+                </div>
+                <div className="apple-health-bar-group">
+                  <div className="apple-health-bar" style={{ height: '50%' }} />
+                  <div className="apple-health-bar" style={{ height: '40%' }} />
+                  <div className="apple-health-bar" style={{ height: '65%' }} />
+                  <div className="apple-health-bar" style={{ height: '35%' }} />
+                  <div className="apple-health-bar" style={{ height: '55%' }} />
+                  <div className="apple-health-bar" style={{ height: '80%', backgroundColor: '#ff3b30' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Rasio Menabung */}
+            <div className="card apple-health-card" style={{ padding: '1.25rem' }}>
+              <div className="flex-between flex-align mb-2">
+                <div className="flex-align gap-2">
+                  <span style={{ color: '#007aff', fontSize: '1.1rem' }}>🔥</span>
+                  <span style={{ color: '#007aff', fontWeight: 700, fontSize: '0.95rem' }}>Rasio Menabung</span>
+                </div>
+                <div className="flex-align gap-1 text-xs" style={{ color: '#8e8e93', fontWeight: 500 }}>
+                  <span>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <ChevronRight size={14} />
+                </div>
+              </div>
+              <div className="flex-between flex-align mt-2">
+                <div>
+                  <span style={{ fontSize: '1.75rem', fontWeight: 800, color: '#000000', letterSpacing: '-0.02em' }}>
+                    {summary.savingsRate}%
+                  </span>
+                </div>
+                <div className="apple-health-bar-group">
+                  <div className="apple-health-bar" style={{ height: '30%' }} />
+                  <div className="apple-health-bar" style={{ height: '45%' }} />
+                  <div className="apple-health-bar" style={{ height: '60%' }} />
+                  <div className="apple-health-bar" style={{ height: '50%' }} />
+                  <div className="apple-health-bar" style={{ height: '70%' }} />
+                  <div className="apple-health-bar active-blue" style={{ height: '85%' }} />
+                </div>
               </div>
             </div>
           </div>
@@ -2280,7 +2339,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
         </div>
       )}
 
-      {/* iOS Floating Bottom Dock Navigation (Apple Fitness Style) */}
+      {/* iOS Floating Bottom Dock Navigation (Apple Health Light Style) */}
       <div className="apple-dock-wrapper">
         <div className="apple-dock-container">
           <button 
@@ -2288,7 +2347,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
             onClick={() => setActiveTab('dasbor')}
           >
             <LayoutDashboard size={20} className="apple-dock-icon" />
-            <span>Dasbor</span>
+            <span>Rangkuman</span>
           </button>
 
           <button 
@@ -2323,6 +2382,14 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
             <span>Data</span>
           </button>
         </div>
+
+        <button 
+          className="apple-dock-action-btn" 
+          title="Catat / Cari Transaksi"
+          onClick={() => setActiveTab('dasbor')}
+        >
+          <Search size={22} />
+        </button>
       </div>
 
       {/* Custom Styles */}
