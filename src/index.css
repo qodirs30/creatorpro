@@ -1997,6 +1997,67 @@ input, textarea, select {
   transform: scale(0.92);
 }
 
+/* ==========================================================================
+   LIGHT MODE OVERRIDES FOR NERACA KEUANGAN & GLOBAL SURFACES
+   ========================================================================== */
+.light-mode-container {
+  background-color: #f2f2f7 !important;
+  color: #000000 !important;
+  min-height: 100vh;
+  padding-bottom: 6.5rem;
+}
+
+.light-mode-container .card {
+  background-color: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+  color: #000000 !important;
+}
+
+.light-mode-container .text-primary,
+.light-mode-container h1, 
+.light-mode-container h2, 
+.light-mode-container h3, 
+.light-mode-container h4, 
+.light-mode-container h5, 
+.light-mode-container h6 {
+  color: #000000 !important;
+}
+
+.light-mode-container .text-secondary,
+.light-mode-container .text-muted {
+  color: #6c6c70 !important;
+}
+
+.light-mode-container .input-field,
+.light-mode-container select,
+.light-mode-container textarea {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #e5e5ea !important;
+  box-shadow: none !important;
+}
+
+.light-mode-container .input-field:focus,
+.light-mode-container select:focus,
+.light-mode-container textarea:focus {
+  border-color: #007aff !important;
+  outline: none !important;
+}
+
+.light-mode-container .table-responsive th {
+  background-color: #f8f9fa !important;
+  color: #1c1c1e !important;
+  border-bottom: 2px solid #e5e5ea !important;
+}
+
+.light-mode-container .table-responsive td {
+  color: #1c1c1e !important;
+  border-bottom: 1px solid #f2f2f7 !important;
+}
+
+
 
 
 

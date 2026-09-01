@@ -808,18 +808,18 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
     padding: '0.45rem 1rem',
     borderRadius: '999px',
     border: '1px solid',
-    borderColor: active ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.04)',
-    backgroundColor: active ? 'var(--primary-light)' : 'rgba(255, 255, 255, 0.01)',
-    color: active ? 'var(--primary)' : 'var(--text-secondary)',
+    borderColor: active ? '#007aff' : '#e5e5ea',
+    backgroundColor: active ? '#007aff' : '#ffffff',
+    color: active ? '#ffffff' : '#1c1c1e',
     fontSize: '0.78rem',
     fontWeight: 600,
     cursor: 'pointer',
-    transition: 'all 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
-    boxShadow: active ? '0 4px 12px rgba(99, 102, 241, 0.12)' : 'none',
+    transition: 'all 0.2s ease',
+    boxShadow: active ? '0 2px 8px rgba(0, 122, 255, 0.25)' : 'none',
   });
 
   return (
-    <div className="page-container" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '6rem' }}>
+    <div className="page-container light-mode-container" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '6rem' }}>
       {/* Apple Health Style Top Header */}
       <div style={{ marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
@@ -1414,7 +1414,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
 
                 <div className="p-4 flex-column gap-3" style={{ background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.03) 0%, transparent 100%)' }}>
                   {aiAnalysis ? (
-                    <div className="ai-chat-bubble p-4 glass-panel animate-fadeIn" style={{ maxHeight: '380px', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.04)', borderRadius: '18px', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+                    <div className="ai-chat-bubble p-4 animate-fadeIn" style={{ maxHeight: '380px', overflowY: 'auto', background: '#f8f9fa', border: '1px solid #e5e5ea', borderRadius: '18px', display: 'flex', flexDirection: 'column', gap: '0.35rem', color: '#000000' }}>
                       {renderFormattedAdvice(aiAnalysis)}
                     </div>
                   ) : (
@@ -1614,7 +1614,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                       <div className="desktop-only-table" style={{ width: '100%' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                           <thead>
-                            <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', color: 'var(--text-secondary)' }}>
+                            <tr style={{ borderBottom: '2px solid #e5e5ea', color: '#1c1c1e', background: '#f8f9fa' }}>
                               <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Tanggal & Jam</th>
                               <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Keterangan</th>
                               <th style={{ textAlign: 'left', padding: '0.6rem 0.5rem', fontWeight: 600 }}>Kategori</th>
@@ -1642,7 +1642,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                                   key={entry.id} 
                                   className="table-row-hover"
                                   style={{ 
-                                    borderBottom: '1px solid rgba(255, 255, 255, 0.03)',
+                                    borderBottom: '1px solid #e5e5ea',
                                     transition: 'background-color 0.2s'
                                   }}
                                 >
@@ -1721,8 +1721,8 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                             <div 
                               key={entry.id} 
                               style={{
-                                background: 'rgba(255, 255, 255, 0.01)',
-                                border: '1px solid rgba(255, 255, 255, 0.03)',
+                                background: '#ffffff',
+                                border: '1px solid #e5e5ea',
                                 borderRadius: '14px',
                                 padding: '0.75rem 0.85rem',
                                 display: 'flex',
@@ -2027,7 +2027,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                     </div>
                   ) : (
                     recurringBills.map(b => (
-                      <div key={b.id} className="flex-between p-3" style={{ background: b.isPaid ? 'rgba(16,185,129,0.02)' : 'rgba(255, 255, 255, 0.01)', border: b.isPaid ? '1px solid rgba(16,185,129,0.1)' : '1px solid rgba(255,255,255,0.03)', borderRadius: '16px' }}>
+                      <div key={b.id} className="flex-between p-3" style={{ background: b.isPaid ? 'rgba(16,185,129,0.05)' : '#ffffff', border: b.isPaid ? '1px solid rgba(16,185,129,0.2)' : '1px solid #e5e5ea', borderRadius: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <button
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: b.isPaid ? 'var(--success)' : 'var(--text-secondary)' }}
@@ -2120,7 +2120,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                     </div>
                   ) : (
                     debts.map(d => (
-                      <div key={d.id} className="flex-between p-3" style={{ background: d.isResolved ? 'rgba(255,255,255,0.01)' : 'rgba(255, 255, 255, 0.02)', border: d.isResolved ? '1px solid rgba(255,255,255,0.03)' : d.type === 'owe' ? '1px solid rgba(244,63,94,0.1)' : '1px solid rgba(16,185,129,0.1)', borderRadius: '16px' }}>
+                      <div key={d.id} className="flex-between p-3" style={{ background: d.isResolved ? '#f8f9fa' : '#ffffff', border: d.isResolved ? '1px solid #e5e5ea' : d.type === 'owe' ? '1px solid rgba(244,63,94,0.3)' : '1px solid rgba(16,185,129,0.3)', borderRadius: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                           <button
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: d.isResolved ? 'var(--success)' : 'var(--text-secondary)' }}
