@@ -3,7 +3,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, Plus, Trash2, 
   Search, Filter, Sparkles, AlertTriangle, Calendar, 
   HelpCircle, RefreshCw, Wallet, PiggyBank, ArrowDownRight, ArrowUpRight,
-  Coffee, Utensils, ShoppingBag, CreditCard, ChevronRight, CalendarDays, 
+  Coffee, Utensils, ShoppingBag, CreditCard, ChevronRight, ChevronLeft, CalendarDays, 
   SlidersHorizontal, LayoutDashboard, PlusCircle, CheckCircle, XCircle, Download, Upload, AlertCircle
 } from 'lucide-react';
 import useAppStore from '../store/useAppStore';
