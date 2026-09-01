@@ -1862,6 +1862,97 @@ input, textarea, select {
   }
 }
 
+/* ==========================================================================
+   APPLE FITNESS STYLE UI TOKENS & FLOATING BOTTOM DOCK
+   ========================================================================== */
+.apple-card {
+  background-color: #1c1c1e !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.apple-btn-neon {
+  background-color: #a3e635 !important;
+  color: #000000 !important;
+  font-weight: 700 !important;
+  border-radius: 30px !important;
+  border: none !important;
+  transition: transform 0.15s ease, filter 0.2s ease !important;
+}
+
+.apple-btn-neon:active {
+  transform: scale(0.97) !important;
+}
+
+.apple-icon-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background-color: rgba(163, 230, 53, 0.15);
+  color: #a3e635;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* iOS Floating Bottom Dock Bar */
+.apple-dock-wrapper {
+  position: fixed;
+  bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  width: min(92%, 460px);
+}
+
+.apple-dock-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  background: rgba(28, 28, 30, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 36px;
+  padding: 0.45rem 0.65rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.apple-dock-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0.4rem 0.65rem;
+  border-radius: 24px;
+  border: none;
+  background: transparent;
+  color: #8e8e93;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.apple-dock-item.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #a3e635;
+}
+
+.apple-dock-item.active .apple-dock-icon {
+  color: #a3e635;
+  transform: scale(1.1);
+}
+
+.apple-dock-icon {
+  transition: transform 0.2s ease;
+}
+
+
 
 
 

@@ -819,19 +819,31 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
   });
 
   return (
-    <div className="page-container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Header */}
-      <div className="page-header flex-between flex-wrap gap-2" style={{ marginBottom: '1.5rem' }}>
+    <div className="page-container" style={{ maxWidth: '1400px', margin: '0 auto', paddingBottom: '6rem' }}>
+      {/* Apple Fitness Style Top Header */}
+      <div className="page-header flex-between flex-wrap gap-2" style={{ marginBottom: '1.25rem' }}>
         <div>
-          <h1 className="page-title flex-align gap-2" style={{ fontSize: '1.85rem' }}>
-            <Wallet className="icon-accent" size={26} /> Neraca Keuangan Studio
+          <h1 className="page-title flex-align gap-2" style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.025em' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'rgba(163, 230, 53, 0.15)', color: '#a3e635' }}>
+              <Wallet size={20} />
+            </span> 
+            Neraca Studio
           </h1>
-          <p className="page-subtitle">Kelola dompet kas, target anggaran bulanan, tagihan rutin, utang, dan analisis AI Suki.</p>
+          <p className="page-subtitle" style={{ color: '#8e8e93', fontSize: '0.85rem' }}>Kelola kas, anggaran, tagihan, dan analisis AI Suki.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button 
+            style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#2c2c2e', border: 'none', color: '#a3e635', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }} 
+            title="Suki AI Advisor" 
+            onClick={() => setActiveTab('dasbor')}
+          >
+            <Sparkles size={18} />
+          </button>
         </div>
       </div>
 
       {/* Tabs Navigation Segmented Control */}
-      <div className="card" style={{ padding: '0.5rem', marginBottom: '1.5rem', transform: 'none', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <div className="card apple-card" style={{ padding: '0.5rem', marginBottom: '1.5rem', transform: 'none', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
         <button style={getTabStyle('dasbor')} onClick={() => setActiveTab('dasbor')}>
           <LayoutDashboard size={16} /> Dasbor Utama
         </button>
@@ -1140,7 +1152,7 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
                     />
                   </div>
 
-                  <button type="submit" className="btn btn-primary w-full mt-2" style={{ padding: '0.85rem', borderRadius: '14px', fontSize: '0.9rem', fontWeight: 600 }}>
+                  <button type="submit" className="btn apple-btn-neon w-full mt-2" style={{ padding: '0.85rem', borderRadius: '30px', fontSize: '0.95rem' }}>
                     <Plus size={18} /> Tambah Transaksi
                   </button>
                 </form>
@@ -2267,6 +2279,51 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
           </div>
         </div>
       )}
+
+      {/* iOS Floating Bottom Dock Navigation (Apple Fitness Style) */}
+      <div className="apple-dock-wrapper">
+        <div className="apple-dock-container">
+          <button 
+            className={`apple-dock-item ${activeTab === 'dasbor' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dasbor')}
+          >
+            <LayoutDashboard size={20} className="apple-dock-icon" />
+            <span>Dasbor</span>
+          </button>
+
+          <button 
+            className={`apple-dock-item ${activeTab === 'anggaran' ? 'active' : ''}`}
+            onClick={() => setActiveTab('anggaran')}
+          >
+            <PiggyBank size={20} className="apple-dock-icon" />
+            <span>Anggaran</span>
+          </button>
+
+          <button 
+            className={`apple-dock-item ${activeTab === 'tagihan' ? 'active' : ''}`}
+            onClick={() => setActiveTab('tagihan')}
+          >
+            <CalendarDays size={20} className="apple-dock-icon" />
+            <span>Tagihan</span>
+          </button>
+
+          <button 
+            className={`apple-dock-item ${activeTab === 'akun' ? 'active' : ''}`}
+            onClick={() => setActiveTab('akun')}
+          >
+            <Wallet size={20} className="apple-dock-icon" />
+            <span>Akun</span>
+          </button>
+
+          <button 
+            className={`apple-dock-item ${activeTab === 'data' ? 'active' : ''}`}
+            onClick={() => setActiveTab('data')}
+          >
+            <SlidersHorizontal size={20} className="apple-dock-icon" />
+            <span>Data</span>
+          </button>
+        </div>
+      </div>
 
       {/* Custom Styles */}
       <style>{`
