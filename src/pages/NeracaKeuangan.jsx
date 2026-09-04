@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { 
-  TrendingUp, TrendingDown, DollarSign, Plus, Trash2, 
+  TrendingUp, TrendingDown, DollarSign, Plus, Trash2, Edit2, X,
   Search, Filter, Sparkles, AlertTriangle, Calendar, 
   HelpCircle, RefreshCw, Wallet, PiggyBank, ArrowDownRight, ArrowUpRight,
   Coffee, Utensils, ShoppingBag, CreditCard, ChevronRight, ChevronLeft, CalendarDays, 
@@ -100,6 +100,7 @@ export default function NeracaKeuangan() {
     financialEntries = [], 
     addFinancialEntry, 
     addMultipleFinancialEntries,
+    updateFinancialEntry,
     deleteFinancialEntry,
     
     // Extended States & Mutators
@@ -186,6 +187,20 @@ export default function NeracaKeuangan() {
   // Mutasi Bank Paste Text
   const [importText, setImportText] = useState('');
 
+  // Modal Pop-Up State for Income/Expense Details
+  const [detailModalType, setDetailModalType] = useState(null); // 'income' | 'expense' | null
+  const [modalFilterPeriod, setModalFilterPeriod] = useState('all'); // 'all' | 'this-month' | 'last-month' | 'custom'
+  const [modalStartDate, setModalStartDate] = useState('');
+  const [modalEndDate, setModalEndDate] = useState('');
+  const [modalSearchTerm, setModalSearchTerm] = useState('');
+  
+  // Edit Entry Sub-Modal State
+  const [editingEntry, setEditingEntry] = useState(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+
   // AI Advisor States
   const [aiAnalysis, setAiAnalysis] = useState('');
   const [loadingAi, setLoadingAi] = useState(false);
@@ -199,6 +214,71 @@ export default function NeracaKeuangan() {
   const handleTypeChange = (newType) => {
     setType(newType);
     setCategory(categories[newType][0]);
+  };
+
+  // Filtering for Modal Pop-Up
+  const modalEntries = useMemo(() => {
+    if (!detailModalType) return [];
+    
+    return financialEntries.filter(entry => {
+      if (entry.type !== detailModalType) return false;
+      
+      if (modalSearchTerm.trim()) {
+        const term = modalSearchTerm.toLowerCase();
+        const matchDesc = entry.description?.toLowerCase().includes(term);
+        const matchCat = entry.category?.toLowerCase().includes(term);
+        if (!matchDesc && !matchCat) return false;
+      }
+      
+      if (!entry.date) return true;
+      const entryDate = new Date(entry.date);
+      const now = new Date();
+      
+      if (modalFilterPeriod === 'this-month') {
+        return entryDate.getMonth() === now.getMonth() && entryDate.getFullYear() === now.getFullYear();
+      }
+      if (modalFilterPeriod === 'last-month') {
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        return entryDate.getMonth() === lastMonth.getMonth() && entryDate.getFullYear() === lastMonth.getFullYear();
+      }
+      if (modalFilterPeriod === 'custom') {
+        if (modalStartDate && entryDate < new Date(modalStartDate)) return false;
+        if (modalEndDate) {
+          const end = new Date(modalEndDate);
+          end.setHours(23, 59, 59, 999);
+          if (entryDate > end) return false;
+        }
+      }
+      
+      return true;
+    });
+  }, [financialEntries, detailModalType, modalFilterPeriod, modalStartDate, modalEndDate, modalSearchTerm]);
+
+  const openEditModal = (entry) => {
+    setEditingEntry(entry);
+    setEditAmount(entry.amount);
+    setEditCategory(entry.category || (entry.type === 'income' ? 'Gaji' : 'Makanan'));
+    setEditDate(entry.date ? entry.date.split('T')[0] : new Date().toISOString().split('T')[0]);
+    setEditDescription(entry.description || '');
+  };
+
+  const handleSaveEdit = (e) => {
+    e.preventDefault();
+    if (!editingEntry) return;
+    const numAmount = parseFloat(editAmount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      alert('Masukkan nominal yang valid!');
+      return;
+    }
+    
+    updateFinancialEntry(editingEntry.id, {
+      amount: numAmount,
+      category: editCategory,
+      date: editDate,
+      description: editDescription
+    });
+    
+    setEditingEntry(null);
   };
 
   // Submit Transaksi Baru
@@ -925,16 +1005,24 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
               </div>
             </div>
 
-            {/* Card 2: Total Pendapatan */}
-            <div className="card obsidian-card" style={{ padding: '1.25rem' }}>
+            {/* Card 2: Total Pendapatan (Clickable Modal Trigger) */}
+            <div 
+              className="card obsidian-card" 
+              style={{ padding: '1.25rem', cursor: 'pointer', transition: 'all 0.2s ease' }}
+              onClick={() => {
+                setDetailModalType('income');
+                setModalFilterPeriod('all');
+                setModalSearchTerm('');
+              }}
+              title="Klik untuk membuka riwayat detail Pendapatan"
+            >
               <div className="flex-between flex-align mb-2">
                 <div className="flex-align gap-2">
                   <span style={{ color: '#10b981', fontSize: '1.1rem' }}>🔥</span>
                   <span style={{ color: '#10b981', fontWeight: 700, fontSize: '0.95rem' }}>Total Pendapatan</span>
                 </div>
                 <div className="flex-align gap-1 text-xs" style={{ color: '#94a3b8', fontWeight: 500 }}>
-                  <span>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
-                  <ChevronRight size={14} />
+                  <span style={{ background: 'rgba(16,185,129,0.15)', color: '#10b981', padding: '0.2rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 600 }}>Detail ↗</span>
                 </div>
               </div>
               <div className="flex-between flex-align mt-2">
@@ -954,16 +1042,24 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
               </div>
             </div>
 
-            {/* Card 3: Total Pengeluaran */}
-            <div className="card obsidian-card" style={{ padding: '1.25rem' }}>
+            {/* Card 3: Total Pengeluaran (Clickable Modal Trigger) */}
+            <div 
+              className="card obsidian-card" 
+              style={{ padding: '1.25rem', cursor: 'pointer', transition: 'all 0.2s ease' }}
+              onClick={() => {
+                setDetailModalType('expense');
+                setModalFilterPeriod('all');
+                setModalSearchTerm('');
+              }}
+              title="Klik untuk membuka riwayat detail Pengeluaran"
+            >
               <div className="flex-between flex-align mb-2">
                 <div className="flex-align gap-2">
                   <span style={{ color: '#f43f5e', fontSize: '1.1rem' }}>🔥</span>
                   <span style={{ color: '#f43f5e', fontWeight: 700, fontSize: '0.95rem' }}>Total Pengeluaran</span>
                 </div>
                 <div className="flex-align gap-1 text-xs" style={{ color: '#94a3b8', fontWeight: 500 }}>
-                  <span>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
-                  <ChevronRight size={14} />
+                  <span style={{ background: 'rgba(244,63,94,0.15)', color: '#f43f5e', padding: '0.2rem 0.5rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: 600 }}>Detail ↗</span>
                 </div>
               </div>
               <div className="flex-between flex-align mt-2">
@@ -2383,6 +2479,266 @@ Tolong berikan ulasan ringkas neraca keuangan saya, roasting tipis jika pengelua
           <Search size={22} />
         </button>
       </div>
+
+      {/* ========================================================================================= */}
+      {/* MODAL POP-UP DETAIL PENDAPATAN / PENGELUARAN */}
+      {/* ========================================================================================= */}
+      {detailModalType && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(12px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} className="animate-fadeIn">
+          <div className="card obsidian-card" style={{ width: '100%', maxWidth: '780px', maxHeight: '88vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden', border: detailModalType === 'income' ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(244,63,94,0.3)' }}>
+            
+            {/* Modal Header */}
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: detailModalType === 'income' ? 'linear-gradient(135deg, rgba(16,185,129,0.12), transparent)' : 'linear-gradient(135deg, rgba(244,63,94,0.12), transparent)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ width: '38px', height: '38px', borderRadius: '12px', background: detailModalType === 'income' ? 'rgba(16,185,129,0.2)' : 'rgba(244,63,94,0.2)', color: detailModalType === 'income' ? '#10b981' : '#f43f5e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {detailModalType === 'income' ? <ArrowUpRight size={22} /> : <ArrowDownRight size={22} />}
+                </span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#ffffff' }}>
+                    {detailModalType === 'income' ? 'Riwayat Detail Pendapatan' : 'Riwayat Detail Pengeluaran'}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
+                    Total: <strong style={{ color: detailModalType === 'income' ? '#10b981' : '#f43f5e' }}>Rp {modalEntries.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0).toLocaleString('id-ID')}</strong> ({modalEntries.length} transaksi)
+                  </p>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setDetailModalType(null)} 
+                style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: 'none', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Controls (Filters & Search) */}
+            <div style={{ padding: '1rem 1.5rem', background: 'rgba(0,0,0,0.2)', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                  <CalendarDays size={15} style={{ color: '#6366f1' }} />
+                  <span className="text-xs font-bold text-uppercase" style={{ color: '#94a3b8', marginRight: '0.4rem' }}>Filter Tanggal:</span>
+                  {[
+                    { id: 'all', label: 'Semua Waktu' },
+                    { id: 'this-month', label: 'Bulan Ini' },
+                    { id: 'last-month', label: 'Bulan Lalu' },
+                    { id: 'custom', label: 'Kustom' },
+                  ].map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => setModalFilterPeriod(p.id)}
+                      style={getPillStyle(modalFilterPeriod === p.id)}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ position: 'relative', width: '220px' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Cari..."
+                    value={modalSearchTerm}
+                    onChange={(e) => setModalSearchTerm(e.target.value)}
+                    style={{ paddingLeft: '2.1rem', height: '34px', fontSize: '0.8rem', width: '100%', borderRadius: '999px' }}
+                  />
+                </div>
+              </div>
+
+              {modalFilterPeriod === 'custom' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} className="animate-fadeIn">
+                  <span className="text-xs text-muted">Dari:</span>
+                  <input
+                    type="date"
+                    className="input-field py-1 px-2 text-xs"
+                    style={{ width: '135px', height: '32px' }}
+                    value={modalStartDate}
+                    onChange={(e) => setModalStartDate(e.target.value)}
+                  />
+                  <span className="text-xs text-muted">s/d:</span>
+                  <input
+                    type="date"
+                    className="input-field py-1 px-2 text-xs"
+                    style={{ width: '135px', height: '32px' }}
+                    value={modalEndDate}
+                    onChange={(e) => setModalEndDate(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Modal Body / Transaction List */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {modalEntries.length === 0 ? (
+                <div style={{ padding: '3rem 1rem', textAlign: 'center', color: '#94a3b8' }}>
+                  <HelpCircle size={40} style={{ margin: '0 auto 0.75rem auto', opacity: 0.4 }} />
+                  <p style={{ margin: 0, fontWeight: 600 }}>Tidak ada transaksi {detailModalType === 'income' ? 'pendapatan' : 'pengeluaran'} pada filter ini.</p>
+                </div>
+              ) : (
+                modalEntries.map(entry => (
+                  <div 
+                    key={entry.id} 
+                    style={{ 
+                      padding: '0.9rem 1.1rem', 
+                      borderRadius: '16px', 
+                      background: 'rgba(255,255,255,0.03)', 
+                      border: '1px solid rgba(255,255,255,0.06)', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'space-between', 
+                      gap: '1rem',
+                      flexWrap: 'wrap'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                      <span style={{ width: '36px', height: '36px', borderRadius: '50%', background: detailModalType === 'income' ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)', color: detailModalType === 'income' ? '#10b981' : '#f43f5e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {detailModalType === 'income' ? <ArrowUpRight size={18} /> : <ArrowDownRight size={18} />}
+                      </span>
+                      <div>
+                        <div style={{ fontSize: '0.92rem', fontWeight: 700, color: '#ffffff' }}>
+                          {entry.description || entry.category}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ background: 'rgba(255,255,255,0.06)', padding: '0.1rem 0.4rem', borderRadius: '6px' }}>{entry.category}</span>
+                          <span>•</span>
+                          <span>{entry.date ? new Date(entry.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <span style={{ fontSize: '1.05rem', fontWeight: 800, color: detailModalType === 'income' ? '#10b981' : '#f43f5e' }}>
+                        {detailModalType === 'income' ? '+' : '-'} Rp {Number(entry.amount).toLocaleString('id-ID')}
+                      </span>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <button
+                          onClick={() => openEditModal(entry)}
+                          style={{ padding: '0.4rem 0.65rem', borderRadius: '8px', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}
+                          title="Edit Transaksi"
+                        >
+                          <Edit2 size={13} /> Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm('Apakah Anda yakin ingin menghapus transaksi ini?')) {
+                              deleteFinancialEntry(entry.id);
+                            }
+                          }}
+                          style={{ padding: '0.4rem 0.65rem', borderRadius: '8px', background: 'rgba(244,63,94,0.15)', border: '1px solid rgba(244,63,94,0.3)', color: '#f43f5e', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.25rem', cursor: 'pointer' }}
+                          title="Hapus Transaksi"
+                        >
+                          <Trash2 size={13} /> Hapus
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.3)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button 
+                onClick={() => setDetailModalType(null)}
+                style={{ padding: '0.55rem 1.25rem', borderRadius: '999px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#ffffff', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================================= */}
+      {/* SUB-MODAL EDIT TRANSAKSI */}
+      {/* ========================================================================================= */}
+      {editingEntry && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(16px)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }} className="animate-fadeIn">
+          <div className="card obsidian-card" style={{ width: '100%', maxWidth: '460px', padding: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Edit2 size={18} style={{ color: '#6366f1' }} /> Edit Transaksi
+              </h3>
+              <button 
+                onClick={() => setEditingEntry(null)} 
+                style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', border: 'none', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label className="text-xs font-bold text-muted mb-1 block">Nominal (Rp)</label>
+                <input
+                  type="number"
+                  className="input-field"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                  placeholder="Contoh: 150000"
+                  required
+                  style={{ width: '100%', height: '42px', fontSize: '1rem', fontWeight: 700 }}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted mb-1 block">Kategori</label>
+                <select
+                  className="input-field"
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value)}
+                  style={{ width: '100%', height: '42px' }}
+                >
+                  {(categories[editingEntry.type] || []).map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted mb-1 block">Tanggal</label>
+                <input
+                  type="date"
+                  className="input-field"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  style={{ width: '100%', height: '42px' }}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-muted mb-1 block">Keterangan / Catatan</label>
+                <input
+                  type="text"
+                  className="input-field"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Catatan transaksi..."
+                  style={{ width: '100%', height: '42px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditingEntry(null)}
+                  style={{ flex: 1, padding: '0.75rem', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  style={{ flex: 1, padding: '0.75rem', borderRadius: '12px', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', border: 'none', color: '#ffffff', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(99, 102, 241, 0.4)' }}
+                >
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Custom Styles */}
       <style>{`
